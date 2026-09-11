@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile 🕶️</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a href="#top" class="brand">Ridhan Firdaus</a>
+    <nav class="site-nav">
+      <a href="#about" data-nav="about">About</a>
+      <a href="#skills" data-nav="skills">Skills</a>
+      <a href="#work" data-nav="work">Work</a>
+      <a href="#contact" data-nav="contact">Contact</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- HERO / TITLE BLOCK -->
+    <section class="hero" id="hero">
+      <div class="hero-crosshair" aria-hidden="true">
+        <div class="ch-line ch-h"></div>
+        <div class="ch-line ch-v"></div>
+        <div class="ch-coord">X:0000 Y:0000</div>
+      </div>
+
+      <div class="hero-inner">
+        <div class="hero-content">
+          <p class="hero-eyebrow">Data Specialist </p>
+          <h1 class="hero-name">Muhammad Ridhan Firdaus</h1>
+          <p class="hero-tagline">I analyze and transform data into meaningful insights — clear,
+            useful, and ready to support better decisions and build predictive machine learning solutions</p>
+          <div class="hero-actions">
+            <a href="#work" class="btn btn-primary">View the work</a>
+            <a href="#contact" class="btn btn-ghost">Get in touch</a>
+          </div>
+        </div>
+
+        <div class="hero-photo-frame">
+          <img src="images/ridhan.png" alt="Ridhan Firdaus" class="hero-photo">
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about" id="about">
+      <div class="section-label"><span class="section-num">§01</span> About</div>
+      <div class="about-grid">
+        <p class="about-lead">
+          I'm a Data Specialist based in Jakarta, focused on data analysis and machine learning. I enjoy finding patterns in data, turning complex problems into clear insights, and building predictive
+          models that turn data into better decisions.
+        </p>
+        <ul class="about-facts">
+          <li><span>Based in</span><span>Jakarta, ID</span></li>
+          <li><span>Focus</span><span>Data Specialist &amp; Web development</span></li>
+          <li><span>Experience</span><span>Almost 1 years</span></li>
+          <li><span>Available</span><span>Open to work</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="skills" id="skills">
+      <div class="section-label"><span class="section-num">§02</span> Skills</div>
+      <div id="skills-table" class="skills-table"></div>
+    </section>
+
+    <!-- WORK / PROJECT SHEETS -->
+    <section class="work" id="work">
+      <div class="section-label"><span class="section-num">§03</span> My work</div>
+      <div id="project-sheets" class="project-sheets"></div>
+
+    </section>
+
+    <!-- CONTACT / SIGNATURE BLOCK -->
+    <section class="contact" id="contact">
+      <div class="section-label"><span class="section-num">§04</span> Contact</div>
+      <div class="contact-grid">
+        <p class="contact-lead">Have something worth building? I'm currently
+          open to new roles and freelance projects.</p>
+        <div id="contact-links" class="contact-links"></div>
+      </div>
+      <div class="signature-block">
+        <div class="sig-line"></div>
+        <p class="sig-text">Signed &amp; verified — Muhammad Ridhan Firdaus, <span id="sig-year">2026</span></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Built by hand with HTML, CSS &amp; JavaScript.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
