@@ -42,13 +42,17 @@ Everything runs in the browser with no backend and no paid map APIs. SmartPark d
 │   ├── data/site.json          # profile, projects, contacts, collection (editable content)
 │   ├── assets/images/          # portrait, SmartPark hero, project thumbnails
 │   └── templates/document-head.html
+├── server/api/                 # PHP API for Hostinger: setup.php, auth.php, site.php (+ MySQL)
 ├── scripts/
 │   ├── build.mjs               # src → dist/index.html
+│   ├── package-hostinger.mjs   # dist/hostinger/*.zip (index.html + api/) for PHP + MySQL hosting
 │   ├── set-admin.mjs           # .env → src/data/admin-auth.json (hash only, git-ignored)
 │   └── serve.mjs               # static server for dist/
 ├── tests/
 │   ├── unit/                   # SmartPark + KostBills engine tests
 │   ├── e2e/site.spec.mjs       # Playwright: routes, admin, SmartPark flow, KostBills flow
+│   ├── e2e/server.spec.mjs     # Playwright: Hostinger mode (page + PHP API on PHP's built-in server)
+│   ├── server/api.test.mjs     # PHP API: setup, sign-in, CSRF, lockout, saving, conflicts
 │   └── fixtures/admin-auth.json  # TEST-ONLY credential hash (user "e2e-admin")
 ├── .env.example
 └── playwright.config.mjs
@@ -115,6 +119,25 @@ The output is a single static file, `dist/index.html`, and any static host works
 
 - **GitHub Pages:** build to `docs/` with `npm run build -- --out docs/index.html`, commit it, then set Pages to *Deploy from branch → `/docs`*. If you want the admin login on the live site, run `npm run set-admin` before building.
 - **Netlify / Vercel / Cloudflare Pages:** use the build command `npm run build` and the output directory `dist`.
+
+### Hostinger (PHP + MySQL): admin edits saved straight to the live site
+
+`npm run build:hostinger` creates `dist/hostinger/`. The folder contains:
+
+- `website-hostinger-install.zip`, for the first install. It holds `index.html`, the `api/` folder and an `api/config.php` with a freshly generated setup token.
+- `website-hostinger-update.zip`, for later updates. It holds the same files except `config.php` and `setup.php`, so your database settings are never overwritten.
+
+In this mode the page loads its content from MySQL through `api/site.php`. **Save changes** in the admin writes to the database straight away, with no rebuild or re-upload. The login is checked by PHP (`password_hash`), and the admin session is an HttpOnly cookie protected by a CSRF token. After 5 failed sign-ins from an IP, sign-in is locked for 5 minutes. A save from an out-of-date tab is refused rather than overwriting newer content.
+
+First install on Hostinger:
+
+1. In hPanel go to **Databases → MySQL Databases** and create a database and a user. Note the database name, the user and the password.
+2. Upload `website-hostinger-install.zip` to `public_html` and extract it. You should end up with `public_html/index.html` and `public_html/api/`.
+3. In File Manager, open `public_html/api/config.php` and fill in `db_name`, `db_user` and `db_pass`. Keep `db_host` as `localhost`. Leave the `setup_token` as generated.
+4. Open `https://your-domain/api/setup.php`, enter the setup token from `config.php`, then choose the admin username and password (at least 10 characters).
+5. Delete `api/setup.php`. Then open the site and use **Admin login** in the footer.
+
+For later updates, upload `website-hostinger-update.zip` (or only `index.html`) and extract it over the old files.
 
 ## Notes
 

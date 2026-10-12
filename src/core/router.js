@@ -81,13 +81,16 @@ function renderSaveBar() {
   const bar = document.createElement("div");
   bar.id = "save-bar"; bar.className = "save-bar wrap";
   let meter;
-  if (STANDALONE) meter = "Static copy · export site.json and commit it to publish";
+  if (SERVER) {
+    const kb = JSON.stringify(ADMIN.draft).length / 1048576;
+    meter = `Saved to your website's database · ${kb.toFixed(1)} MB of 15 MB${kb > 12 ? " · near the limit, use smaller photos" : ""}`;
+  } else if (STANDALONE) meter = "Static copy · export site.json and commit it to publish";
   else {
     const size = buildDocument(ADMIN.draft).length;
     meter = `Site size ${(size / 1048576).toFixed(1)} MB of 16 MB${size > 13 * 1048576 ? " · near the limit, remove photos before adding more" : ""}`;
   }
-  const label = STANDALONE ? "Export site data" : "Publish changes";
-  bar.innerHTML = `<div style="display:grid;gap:2px"><b>${ADMIN.dirty ? (STANDALONE ? "You have unexported changes" : "You have unpublished changes") : "Admin mode · no changes yet"}</b><span class="meter">${meter}</span></div>
+  const label = SERVER ? "Save changes" : STANDALONE ? "Export site data" : "Publish changes";
+  bar.innerHTML = `<div style="display:grid;gap:2px"><b>${ADMIN.dirty ? (SERVER ? "You have unsaved changes" : STANDALONE ? "You have unexported changes" : "You have unpublished changes") : "Admin mode · no changes yet"}</b><span class="meter">${meter}</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="sb-exit">${ADMIN.dirty ? "Discard" : "Exit admin"}</button><button class="btn sm primary" id="sb-pub" ${ADMIN.dirty ? "" : "disabled"}>${label}</button></div>`;
   $("#view").appendChild(bar);
   bar.querySelector("#sb-exit").onclick = () => {
@@ -97,6 +100,16 @@ function renderSaveBar() {
       onMount: (m) => m.querySelector("#disc").onclick = () => { closeModal(); stopAdmin(); } });
   };
   bar.querySelector("#sb-pub").onclick = (e) => publishDraft(e.currentTarget);
+}
+
+/* Server mode: show the content built into the page at once, then switch to newer content saved in
+   the database (if any) and resume an admin session that is still open on the server. */
+async function loadFromServer() {
+  const r = await api("site.php?rev=" + (SITE.rev || 0));
+  if (r.ok && r.data && !ADMIN.on) { replaceSite(r.data); renderChrome(); route(); }
+  const a = await api("auth.php");
+  if (a.ok && a.admin && !ADMIN.on) { ADMIN.csrf = a.csrf; startAdmin(); }
+  else if (!(a.ok && a.admin)) sess.del("kb-admin-session");
 }
 
 function boot() {
@@ -130,7 +143,8 @@ function boot() {
   const back = sess.get("kb-route");
   if (back && !location.hash) { sess.del("kb-route"); history.replaceState(null, "", back); }
   else sess.del("kb-route");
-  if (sessionValid()) {
+  if (SERVER) loadFromServer();
+  else if (sessionValid()) {
     CAP.ready.then(() => { if ((STANDALONE || (CAP.owner && CAP.artifact)) && SITE.auth && !ADMIN.on) startAdmin(); else sess.del("kb-admin-session"); });
   }
   route();

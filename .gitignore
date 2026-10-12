@@ -26,3 +26,7 @@ blob-report/
 Thumbs.db
 .vscode/
 .idea/
+
+# Server API secrets
+server/api/config.php
+*.sqlite

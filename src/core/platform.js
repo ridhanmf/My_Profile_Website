@@ -5,6 +5,27 @@
    - standalone: any static host (GitHub Pages, local server). Admin edits are exported as
                  site.json and committed to src/data/ before rebuilding. */
 const STANDALONE = !(window.claude && typeof window.claude.use === "function");
+/* Server mode (e.g. Hostinger with PHP + MySQL): the build sets API_BASE (like "api/"). Content is
+   then loaded from and saved to the database through the PHP API in server/api. */
+const API_BASE = "__API_BASE__";
+const SERVER = STANDALONE && !!API_BASE;
+async function api(path, { method = "GET", json } = {}) {
+  const headers = { Accept: "application/json" };
+  if (json !== undefined) headers["Content-Type"] = "application/json";
+  if (method !== "GET" && ADMIN.csrf) headers["X-CSRF-Token"] = ADMIN.csrf;
+  let res;
+  try { res = await fetch(API_BASE + path, { method, headers, body: json === undefined ? undefined : JSON.stringify(json), credentials: "same-origin", cache: "no-store" }); }
+  catch (e) { return { ok: false, status: 0, error: "network" }; }
+  let data = {};
+  try { data = await res.json(); } catch (e) { data = { error: "bad_response" }; }
+  return { ...data, status: res.status, ok: res.ok && data.ok !== false };
+}
+/* Swap the page's content for newer content (from the server) without reloading. */
+function replaceSite(data) {
+  Object.keys(SITE).forEach((k) => { delete SITE[k]; });
+  Object.assign(SITE, data);
+  SITE.cars = SITE.cars || [];
+}
 const CAP = { checked: false, owner: false, artifact: null, downloads: null, ready: null };
 CAP.ready = (async () => {
   const use = window.claude && typeof window.claude.use === "function" ? (n) => window.claude.use(n).catch(() => null) : async () => null;

@@ -1,0 +1,11 @@
+# Block direct access to private files; disable folder listings.
+Options -Indexes
+<FilesMatch "^(_lib|config|config\.example)\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

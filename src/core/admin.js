@@ -30,6 +30,7 @@ setInterval(() => { if (ADMIN.on && !sessionValid()) { stopAdmin(); toast("Signe
 /* ---------- Admin state ---------- */
 const ADMIN = {
   on: false,
+  csrf: "",          // server mode: token from the PHP session, sent with every change
   draft: null,       // working copy of SITE while editing
   dirty: false,
 };
@@ -43,6 +44,7 @@ function startAdmin() {
   renderChrome(); route();
 }
 function stopAdmin() {
+  if (SERVER && ADMIN.csrf) { api("auth.php?action=logout", { method: "POST" }); ADMIN.csrf = ""; }
   ADMIN.on = false; ADMIN.draft = null; ADMIN.dirty = false;
   sess.del("kb-admin-session"); sess.del("kb-admin-draft");
   renderChrome(); route();
@@ -54,6 +56,7 @@ function markDirty() {
 }
 async function publishDraft(btn) {
   if (!ADMIN.on || !sessionValid()) { stopAdmin(); toast("Your admin session ended. Sign in again to publish."); return; }
+  if (SERVER) return saveToServer(btn);
   if (STANDALONE) return exportDraft();
   if (!CAP.artifact) { toast("Saving isn't available in this view."); return; }
   const next = JSON.parse(JSON.stringify(ADMIN.draft));
@@ -103,14 +106,39 @@ async function exportDraft() {
   toast("site.json downloaded. Replace src/data/site.json with it, then run npm run build.", 6000);
 }
 
+/* Server mode: save the draft to the database; visitors get it on their next page load. */
+async function saveToServer(btn) {
+  const draft = JSON.parse(JSON.stringify(ADMIN.draft));
+  delete draft.auth; delete draft.assetSources;
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  const r = await api("site.php", { method: "POST", json: { baseRev: SITE.rev || 0, data: draft } });
+  if (r.ok) {
+    draft.rev = r.rev;
+    replaceSite(draft);
+    ADMIN.draft = JSON.parse(JSON.stringify(SITE)); ADMIN.dirty = false;
+    sess.del("kb-admin-draft");
+    renderChrome(); route();
+    toast("Saved. Visitors now see your changes.", 3500);
+    return;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = "Save changes"; }
+  if (r.status === 401) { ADMIN.csrf = ""; stopAdmin(); toast("Your admin session ended. Sign in again, then save.", 4500); }
+  else if (r.status === 409) toast("Newer changes were saved from another tab or device. Copy your edits, reload the page, and edit again.", 6500);
+  else if (r.status === 413) toast("The site is over the size limit. Use smaller photos and try again.", 5000);
+  else if (r.status === 0) toast("Couldn't reach the server. Check your connection and try again.");
+  else toast(r.message || "Saving failed. Try again in a moment.", 4500);
+}
+
 function openAdminDialog() {
   if (ADMIN.on) {
     openModal({
       title: "Admin mode",
-      body: STANDALONE
+      body: SERVER
+        ? `<p>You're signed in as admin. <b>Save changes</b> writes them to your website's database, and visitors see them right away. The session ends after 30 minutes without activity.</p>`
+        : STANDALONE
         ? `<p>You're signed in as admin on a static copy of the site. Edits stay in this tab until you export them as <code>site.json</code>; commit that file to publish them. The session ends after 30 minutes without activity.</p><p class="muted">To change the admin login, edit <code>.env</code> and run <code>npm run set-admin</code>, then rebuild.</p>`
         : `<p>You're signed in as admin. Changes stay in this tab until you publish them. The session ends after 30 minutes without activity.</p>`,
-      foot: `${STANDALONE ? "" : `<button class="btn" id="admin-pw">Change login</button>`}<button class="btn" data-close>Keep editing</button><button class="btn danger" id="admin-exit">${ADMIN.dirty ? "Discard changes and sign out" : "Sign out"}</button>`,
+      foot: `${STANDALONE && !SERVER ? "" : `<button class="btn" id="admin-pw">Change login</button>`}<button class="btn" data-close>Keep editing</button><button class="btn danger" id="admin-exit">${ADMIN.dirty ? "Discard changes and sign out" : "Sign out"}</button>`,
       onMount: (m) => {
         m.querySelector("#admin-exit").onclick = () => { closeModal(); stopAdmin(); toast("Signed out."); };
         const pw = m.querySelector("#admin-pw"); if (pw) pw.onclick = openChangeLogin;
@@ -131,6 +159,7 @@ function openAdminDialog() {
   const msg = m.querySelector("#lg-msg"), go = m.querySelector("#lg-go");
   const say = (t) => { msg.textContent = t; msg.hidden = false; };
   const submit = async () => {
+    if (SERVER) return submitServer();
     const lk = lockState();
     if (lk.until > Date.now()) return say(`Too many failed attempts. Try again in ${Math.ceil((lk.until - Date.now()) / 60000)} minute(s).`);
     const user = m.querySelector("#lg-user").value, pass = m.querySelector("#lg-pass").value;
@@ -155,11 +184,27 @@ function openAdminDialog() {
     }
     closeModal(); startAdmin(); toast("Signed in as admin.");
   };
+  /* Server mode: the PHP API checks the password and enforces the lockout. */
+  const submitServer = async () => {
+    const user = m.querySelector("#lg-user").value, pass = m.querySelector("#lg-pass").value;
+    if (!user.trim() || !pass) return say("Enter your username and password.");
+    go.disabled = true; go.textContent = "Checking…"; msg.hidden = true;
+    const r = await api("auth.php?action=login", { method: "POST", json: { username: user.trim(), password: pass } });
+    go.disabled = false; go.textContent = "Sign in";
+    if (r.ok) { ADMIN.csrf = r.csrf; closeModal(); startAdmin(); toast("Signed in as admin."); return; }
+    m.querySelector("#lg-pass").value = "";
+    if (r.status === 401) return say(`Wrong username or password. ${r.attempts_left} attempt(s) left.`);
+    if (r.status === 429) return say(`Too many failed attempts. Try again in ${Math.max(1, Math.ceil((r.retry_after || 300) / 60))} minute(s).`);
+    if (r.status === 503 || r.status === 404) return say("Admin sign-in isn't set up on this server yet. Open api/setup.php to create the admin account.");
+    if (r.status === 0) return say("Couldn't reach the server. Check your connection and try again.");
+    return say(r.message || "Sign-in failed. Try again in a moment.");
+  };
   go.onclick = submit;
   m.querySelector("#login-form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });
 }
 
 function openChangeLogin() {
+  if (SERVER) return openChangeLoginServer();
   const m = openModal({
     title: "Change admin login",
     body: `<p class="muted">The new login is stored as a salted hash. It takes effect after you publish.</p>
@@ -183,3 +228,32 @@ function openChangeLogin() {
   };
 }
 
+/* Server mode: change the admin login on the server (needs the current password). */
+function openChangeLoginServer() {
+  const m = openModal({
+    title: "Change admin login",
+    body: `<p class="muted">The new login is checked by your server and stored as a password hash in the database.</p>
+      <div class="form-grid">
+        <label class="field full"><span>Current password</span><input class="input" id="cl-cur" type="password" autocomplete="current-password"></label>
+        <label class="field full"><span>New username</span><input class="input" id="cl-user" autocomplete="username" autocapitalize="off"></label>
+        <label class="field"><span>New password (10+ characters)</span><input class="input" id="cl-pass" type="password" autocomplete="new-password"></label>
+        <label class="field"><span>Repeat password</span><input class="input" id="cl-pass2" type="password" autocomplete="new-password"></label>
+        <p class="full" id="cl-msg" role="alert" style="color:var(--bad);font-size:13.5px" hidden></p>
+      </div>`,
+    foot: `<button class="btn" data-close>Cancel</button><button class="btn primary" id="cl-save">Update login</button>`,
+  });
+  m.querySelector("#cl-save").onclick = async (e) => {
+    const btn = e.currentTarget;
+    const cur = m.querySelector("#cl-cur").value, u = m.querySelector("#cl-user").value.trim(), p1 = m.querySelector("#cl-pass").value, p2 = m.querySelector("#cl-pass2").value;
+    const say = (t) => { const x = m.querySelector("#cl-msg"); x.textContent = t; x.hidden = false; };
+    if (!cur) return say("Enter your current password.");
+    if (!/^[A-Za-z0-9._-]{3,64}$/.test(u)) return say("Use 3–64 letters, numbers, dots, dashes or underscores for the username.");
+    if (p1.length < 10) return say("Use at least 10 characters for the password.");
+    if (p1 !== p2) return say("The two passwords don't match.");
+    btn.disabled = true;
+    const r = await api("auth.php?action=password", { method: "POST", json: { current: cur, username: u, password: p1 } });
+    btn.disabled = false;
+    if (r.ok) { ADMIN.csrf = r.csrf; closeModal(); toast("Login updated. Use the new username and password next time.", 4000); return; }
+    say(r.message || "Couldn't update the login.");
+  };
+}

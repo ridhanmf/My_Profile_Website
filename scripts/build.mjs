@@ -6,9 +6,11 @@
  * <style id="site-css">, <script id="site-js"> and <script id="site-data"> blocks
  * (see src/core/platform.js -> buildDocument), so the layout here must stay in sync with that.
  *
- * Usage: node scripts/build.mjs [--out dist/index.html] [--auth src/data/admin-auth.json] [--fragment]
+ * Usage: node scripts/build.mjs [--out dist/index.html] [--auth src/data/admin-auth.json] [--fragment] [--api api/ --no-auth]
  *   --auth      admin credential hash file (default: $ADMIN_AUTH_FILE or src/data/admin-auth.json)
  *   --fragment  omit the document head/tail (for hosts that wrap the page in their own skeleton)
+ *   --api       base URL of the PHP API (server mode); content is loaded from and saved to MySQL
+ *   --no-auth   don't embed the admin hash (server mode checks the login on the server)
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join, resolve, extname } from "node:path";
@@ -22,6 +24,8 @@ const opt = (name, fallback) => { const i = args.indexOf(name); return i >= 0 &&
 const OUT = resolve(ROOT, opt("--out", "dist/index.html"));
 const AUTH_FILE = resolve(ROOT, opt("--auth", process.env.ADMIN_AUTH_FILE || "src/data/admin-auth.json"));
 const FRAGMENT = args.includes("--fragment");
+const NO_AUTH = args.includes("--no-auth");          // server mode: the PHP API checks the login instead
+const API_BASE = opt("--api", "");                    // e.g. "api/" for the Hostinger (PHP + MySQL) build
 
 /* Script order matters: helpers first, then data, platform, admin, router, engines, pages, boot. */
 const JS_FILES = [
@@ -47,7 +51,7 @@ const css = readdirSync(join(SRC, "styles")).filter((f) => f.endsWith(".css")).s
 
 /* 2. Scripts, with the two document constants filled in. */
 let js = JS_FILES.map((f) => readFileSync(join(SRC, f), "utf8").trim()).join("\n\n") + "\n";
-for (const [k, v] of [["__SKELETON_HEAD__", SKELETON_HEAD], ["__PAGE_PREFIX__", PAGE_PREFIX]]) {
+for (const [k, v] of [["__SKELETON_HEAD__", SKELETON_HEAD], ["__PAGE_PREFIX__", PAGE_PREFIX], ["__API_BASE__", API_BASE]]) {
   if (!js.includes(`"${k}"`)) fail(`placeholder ${k} not found in scripts`);
   js = js.replace(`"${k}"`, () => JSON.stringify(v));
 }
@@ -71,7 +75,9 @@ data.assetSources = {};
 })(data, "");
 
 /* 4. Admin credential hash (never committed). Without it, admin sign-in reports "not set up". */
-if (existsSync(AUTH_FILE)) {
+if (NO_AUTH) {
+  // nothing to embed
+} else if (existsSync(AUTH_FILE)) {
   const a = JSON.parse(readFileSync(AUTH_FILE, "utf8"));
   if (!a.salt || !a.hash || !a.iter) fail(`${AUTH_FILE} is not a credential file (run npm run set-admin)`);
   data.auth = { alg: a.alg || "PBKDF2-SHA256", iter: a.iter, salt: a.salt, hash: a.hash };
@@ -94,4 +100,4 @@ const html = FRAGMENT ? body : SKELETON_HEAD + body + TAIL;
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, html);
-console.log(`build: ${OUT.replace(ROOT + "/", "")} ${(html.length / 1024).toFixed(0)} KB · admin ${data.auth ? "enabled" : "disabled"}`);
+console.log(`build: ${OUT.replace(ROOT + "/", "")} ${(html.length / 1024).toFixed(0)} KB · admin ${API_BASE ? "via server API" : data.auth ? "enabled" : "disabled"}`);
