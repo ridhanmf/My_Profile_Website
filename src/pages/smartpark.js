@@ -26,6 +26,11 @@ function spHeroUrl() {
   return u ? `url("${String(u).replace(/"/g, "%22")}")` : "none";
 }
 
+/* Page look: "modern" (navy tech) or "tradisional" (batik kawung + tumpal, sogan & indigo). */
+const SLOT_STATE = { free: "kosong", reserved: "dipesan", occupied: "terisi" };
+const SP_THEMES = ["modern", "tradisional"];
+const spTheme = () => { const t = store.get("sp-theme", "modern"); return SP_THEMES.includes(t) ? t : "modern"; };
+
 PAGES.smartpark = {
   level: 1,
   newWorld() {
@@ -33,69 +38,72 @@ PAGES.smartpark = {
     SP.FEED.length = 0; SP.seed(w[1], 16); SP.seed(w[2], 11); SP.FEED.length = 0;
     w.onExit = (c) => { if (this.track && this.track.id === c.id) this.track.exited = { at: Date.now(), parked: c.parkedAt ? SP.dur((c.leftSlotAt || Date.now()) - c.parkedAt) : null }; if (this.sel === c.id) this.sel = null; };
     w.onTransfer = (c, from, to) => {
-      if (c.id === this.sel && this.follow) { this.setLevel(to); toast(`Car #${c.id} ${to === 2 ? "went down the ramp to Basement 2" : "came up the ramp to Basement 1"}.`, 2600); }
+      if (c.id === this.sel && this.follow) { this.setLevel(to); toast(`Mobil #${c.id} ${to === 2 ? "turun lewat ramp ke Basement 2" : "naik lewat ramp ke Basement 1"}.`, 2600); }
     };
     return w;
   },
   setLevel(n) {
     this.level = n;
     $$("[data-level]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.level === n)));
-    const t = $("#sp-av-title"); if (t) t.textContent = `Availability · Basement ${n}`;
+    const t = $("#sp-av-title"); if (t) t.textContent = `Ketersediaan · Basement ${n}`;
     this.ui(); this.renderFlow();
   },
   mount(view) {
     this.world = this.newWorld();
     this.level = 1; this.sel = null; this.follow = true;
-    SP.addLog(this.world[1], "Simulated sensor gateway online · 100 slot sensors across B1 and B2", "sensor");
+    SP.addLog(this.world[1], "Gateway sensor simulasi aktif · 100 sensor slot di B1 dan B2", "sensor");
     this.track = null; // the visitor car whose journey the flow panel follows
-    const kindOpts = SP.KINDS.map((k) => `<option value="${k}">${k === "Regular" ? "Regular driver" : k === "EV" ? "EV driver" : k === "Ladies" ? "Lady driver" : "VIP member"}</option>`).join("");
+    const theme = spTheme();
+    document.body.dataset.spTheme = theme;
+    const themeSwitch = `<div class="seg sp-theme" role="group" aria-label="Tema tampilan">${SP_THEMES.map((t) => `<button type="button" data-sptheme="${t}" aria-pressed="${t === theme}">${t === "modern" ? "Modern" : "Tradisional"}</button>`).join("")}</div>`;
+    const kindOpts = SP.KINDS.map((k) => `<option value="${k}">${k === "Regular" ? "Pengemudi reguler" : k === "EV" ? "Pengemudi mobil listrik" : k === "Ladies" ? "Pengemudi wanita" : "Member VIP"}</option>`).join("");
     view.innerHTML = `
     <section class="sp-hero" style="--hero:${esc(spHeroUrl())}">
       <div class="wrap sp-hero-in">
-        <div class="eyebrow">Featured project · Mall parking navigation</div>
+        <div class="sp-hero-top"><div class="eyebrow">Proyek unggulan · Navigasi parkir mal</div>${themeSwitch}</div>
         <h1>SmartPark</h1>
-        <p>SmartPark is mall parking navigation that helps visitors find an empty slot without circling the basement. Scan QRIS at the B1 gate, open the parking map, pick a slot on Basement 1 or take the ramp down to Basement 2, park, and drive back up to the exit ramp when you're done.</p>
-        <div class="sp-hero-facts"><span><b>2</b> basements</span><span><b>100</b> sensor slots</span><span>EV · Ladies · VIP</span><span>Keep-left traffic</span></div>
+        <p>SmartPark adalah navigasi parkir mal yang membantu pengunjung menemukan slot kosong tanpa harus berputar-putar di basement. Pindai QRIS di gerbang B1, buka peta parkir, pilih slot di Basement 1 atau turun lewat ramp ke Basement 2, parkir, lalu naik kembali ke ramp keluar setelah selesai.</p>
+        <div class="sp-hero-facts"><span><b>2</b> basement</span><span><b>100</b> slot bersensor</span><span>EV · Wanita · VIP</span><span>Lajur kiri</span></div>
       </div>
     </section>
     <div class="bleed">
       <div class="sp-layout">
         <div class="panel sp-stage">
           <div class="sp-top">
-            <div class="seg sp-levels" role="tablist" aria-label="Basement level">
+            <div class="seg sp-levels" role="tablist" aria-label="Lantai basement">
               <button role="tab" data-level="1" aria-pressed="true">Basement 1 <span class="num" id="lv-free-1"></span></button>
               <button role="tab" data-level="2" aria-pressed="false">Basement 2 <span class="num" id="lv-free-2"></span></button>
             </div>
-            <div class="cat-chips" id="sp-cats" aria-label="Special parking categories"></div>
+            <div class="cat-chips" id="sp-cats" aria-label="Kategori parkir khusus"></div>
           </div>
           <div class="sp-controls">
-            <label><span class="sr">Driver type</span><select class="select" id="sp-kind" style="width:auto">${kindOpts}</select></label>
-            <button class="btn primary sm" id="sp-enter">${ICON.plus} Enter mall</button>
-            <button class="btn sm" id="sp-auto">Auto Park Selected</button>
-            <button class="btn sm" id="sp-rush">Rush hour +8</button>
-            <label class="toggle"><input type="checkbox" id="sp-traffic"> Live traffic</label>
-            <label class="toggle" title="Switch floors automatically when the selected car takes a ramp"><input type="checkbox" id="sp-follow" checked> Follow car</label>
-            <button class="btn sm danger" id="sp-reset" style="margin-left:auto">Reset</button>
+            <label><span class="sr">Jenis pengemudi</span><select class="select" id="sp-kind" style="width:auto">${kindOpts}</select></label>
+            <button class="btn primary sm" id="sp-enter">${ICON.plus} Masuk mal</button>
+            <button class="btn sm" id="sp-auto">Parkir Otomatis</button>
+            <button class="btn sm" id="sp-rush">Jam sibuk +8</button>
+            <label class="toggle"><input type="checkbox" id="sp-traffic"> Lalu lintas live</label>
+            <label class="toggle" title="Pindah lantai otomatis saat mobil terpilih melewati ramp"><input type="checkbox" id="sp-follow" checked> Ikuti mobil</label>
+            <button class="btn sm danger" id="sp-reset" style="margin-left:auto">Atur ulang</button>
           </div>
-          <div class="sp-canvas-wrap" id="sp-wrap"><canvas id="sp-canvas" aria-label="Basement parking map. Drag a car onto a free slot to park it."></canvas></div>
-          <p class="muted sp-hint">Drag any car with the mouse (or your finger) onto a free slot to park it. Click a car to select it, then click a free slot on either basement to navigate there; cars bound for Basement 2 use the ramp at the top-right of B1 and come back up the ramp at the top-left of B2. EV, Ladies and VIP slots in the top-right corner only accept matching drivers.</p>
+          <div class="sp-canvas-wrap" id="sp-wrap"><canvas id="sp-canvas" aria-label="Peta parkir basement. Seret mobil ke slot kosong untuk memarkirnya."></canvas></div>
+          <p class="muted sp-hint">Seret mobil dengan mouse (atau jari) ke slot kosong untuk memarkirnya. Klik mobil untuk memilihnya, lalu klik slot kosong di basement mana pun untuk bernavigasi ke sana. Mobil yang menuju Basement 2 memakai ramp di kanan atas B1 dan kembali naik lewat ramp di kiri atas B2. Slot EV, Wanita, dan VIP di pojok kanan atas hanya untuk pengemudi yang sesuai.</p>
         </div>
         <aside class="sp-side">
-          <div class="panel sp-card"><h3>Visitor flow</h3><ol class="flow" id="sp-flow"></ol></div>
+          <div class="panel sp-card"><h3>Alur pengunjung</h3><ol class="flow" id="sp-flow"></ol></div>
           <div class="panel sp-card">
-            <h3 id="sp-av-title">Availability · Basement 1</h3>
-            <div class="sp-big"><b id="sp-free" class="num">50</b><span>of 50 slots free</span></div>
+            <h3 id="sp-av-title">Ketersediaan · Basement 1</h3>
+            <div class="sp-big"><b id="sp-free" class="num">50</b><span>dari 50 slot kosong</span></div>
             <div class="bar" id="sp-bar"></div>
-            <div class="sp-legend"><span><i style="background:var(--ok-soft);box-shadow:inset 0 0 0 1.5px var(--ok)"></i>Free <b id="sp-n-free" class="num">0</b></span><span><i style="background:var(--amber)"></i>Reserved <b id="sp-n-res" class="num">0</b></span><span><i style="background:var(--bad)"></i>Occupied <b id="sp-n-occ" class="num">0</b></span></div>
+            <div class="sp-legend"><span><i style="background:var(--ok-soft);box-shadow:inset 0 0 0 1.5px var(--ok)"></i>Kosong <b id="sp-n-free" class="num">0</b></span><span><i style="background:var(--amber)"></i>Dipesan <b id="sp-n-res" class="num">0</b></span><span><i style="background:var(--bad)"></i>Terisi <b id="sp-n-occ" class="num">0</b></span></div>
             <div class="cat-avail" id="sp-cat-avail"></div>
           </div>
-          <div class="panel sp-card"><h3>Slot status</h3><div class="slot-grid" id="sp-grid"></div></div>
-          <div class="panel sp-card"><h3>Selected car</h3><div class="sp-selected" id="sp-sel"></div></div>
+          <div class="panel sp-card"><h3>Status slot</h3><div class="slot-grid" id="sp-grid"></div></div>
+          <div class="panel sp-card"><h3>Mobil terpilih</h3><div class="sp-selected" id="sp-sel"></div></div>
           <div class="panel sp-card">
-            <h3>IoT sensor feed · simulated</h3>
-            <div class="iot-status"><span class="dot"></span><span id="sp-gw">Simulated gateway · 100 sensors</span></div>
+            <h3>Feed sensor IoT · simulasi</h3>
+            <div class="iot-status"><span class="dot"></span><span id="sp-gw">Gateway simulasi · 100 sensor</span></div>
             <div class="log" id="sp-log"></div>
-            <p class="muted" style="font-size:12px">Demo only. Sensor readings are generated in the browser and aren't connected to real hardware.</p>
+            <p class="muted" style="font-size:12px">Hanya demo. Data sensor dibuat di browser dan tidak terhubung ke perangkat keras sungguhan.</p>
           </div>
         </aside>
       </div>
@@ -107,27 +115,34 @@ PAGES.smartpark = {
     this.ro = new ResizeObserver(resize); this.ro.observe(wrapEl);
     this.mo = new MutationObserver(() => { C = SP.colors(); }); this.mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     this.mq = matchMedia("(prefers-color-scheme: dark)"); this.mqf = () => { C = SP.colors(); }; this.mq.addEventListener("change", this.mqf);
+    this.recolor = () => { C = SP.colors(); };
+    view.querySelector(".sp-theme").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-sptheme]"); if (!b) return;
+      const t = b.dataset.sptheme; store.set("sp-theme", t); document.body.dataset.spTheme = t;
+      $$("[data-sptheme]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      this.recolor();
+    });
     const st = () => this.world[this.level];
     const sel = () => (this.sel ? SP.findCar(this.world, this.sel) : null);
 
     const grid = $("#sp-grid");
-    grid.innerHTML = SP.ROWS.map((row) => `<span class="rl">${row.r}</span>` + SP.SLOTS.filter((s) => s.row === row.r).map((s) => `<button data-slot="${s.id}" data-cat="${s.cat}" aria-label="Slot ${s.id}${s.cat !== "Regular" ? " (" + s.cat + ")" : ""}">${s.cat === "Regular" ? s.i + 1 : SP.CATS[s.cat].glyph}</button>`).join("")).join("");
+    grid.innerHTML = SP.ROWS.map((row) => `<span class="rl">${row.r}</span>` + SP.SLOTS.filter((s) => s.row === row.r).map((s) => `<button data-slot="${s.id}" data-cat="${s.cat}" aria-label="Slot ${s.id}${s.cat !== "Regular" ? " (" + SP.CATS[s.cat].label + ")" : ""}">${s.cat === "Regular" ? s.i + 1 : SP.CATS[s.cat].glyph}</button>`).join("")).join("");
     grid.addEventListener("mouseover", (e) => { const b = e.target.closest("[data-slot]"); hl = b ? b.dataset.slot : null; });
     grid.addEventListener("mouseleave", () => hl = null);
     $$("[data-level]").forEach((b) => b.onclick = () => this.setLevel(+b.dataset.level));
 
     const sendTo = (slotId) => {
       const f = sel();
-      if (!f) { toast("Select a car first, or press Enter mall."); return; }
+      if (!f) { toast("Pilih mobil dulu, atau tekan Masuk mal."); return; }
       const car = f.car;
-      if (car.atGate) { toast("Scan QRIS first to open the gate."); return; }
-      if (car.mode === "leaving") { toast(`Car #${car.id} is on its way out.`); return; }
+      if (car.atGate) { toast("Pindai QRIS dulu untuk membuka gerbang."); return; }
+      if (car.mode === "leaving") { toast(`Mobil #${car.id} sedang menuju pintu keluar.`); return; }
       const chk = SP.canPark(st(), car, SP.SLOT[slotId]);
       if (!chk.ok) { toast(chk.reason); return; }
       const t = SP.parkAnywhere(this.world, car, f.level, this.level, slotId);
-      if (!t) { toast("No route to that slot right now."); return; }
-      SP.addLog(this.world[f.level], `Car #${car.id} navigating to ${SP.code(t.level, slotId)}${t.level !== f.level ? ` via the ramp ${t.level === 2 ? "down" : "up"}` : ""}`);
-      if (t.level !== f.level) toast(`Car #${car.id} will take the ramp ${t.level === 2 ? "down to Basement 2" : "up to Basement 1"}.`);
+      if (!t) { toast("Belum ada rute ke slot itu saat ini."); return; }
+      SP.addLog(this.world[f.level], `Mobil #${car.id} bernavigasi ke ${SP.code(t.level, slotId)}${t.level !== f.level ? ` lewat ramp ${t.level === 2 ? "turun" : "naik"}` : ""}`);
+      if (t.level !== f.level) toast(`Mobil #${car.id} akan ${t.level === 2 ? "turun lewat ramp ke Basement 2" : "naik lewat ramp ke Basement 1"}.`);
       this.renderFlow();
     };
     grid.addEventListener("click", (e) => { const b = e.target.closest("[data-slot]"); if (b) sendTo(b.dataset.slot); });
@@ -142,7 +157,7 @@ PAGES.smartpark = {
       if (car) {
         this.sel = car.id; if (car.user) this.track = { id: car.id };
         this.renderFlow();
-        if (car.atGate) { toast("Scan QRIS first to open the gate."); return; }
+        if (car.atGate) { toast("Pindai QRIS dulu untuk membuka gerbang."); return; }
         drag = { car, sx: x, sy: y, moved: false, origin: null, offx: car.x - x, offy: car.y - y };
         cv.setPointerCapture(e.pointerId); e.preventDefault();
         return;
@@ -180,26 +195,26 @@ PAGES.smartpark = {
     const enter = () => {
       if (this.track && !this.track.exited) {
         const f = SP.findCar(this.world, this.track.id);
-        if (f && f.car.atGate) { toast("Your car is already waiting at the gate. Scan QRIS to continue."); return; }
+        if (f && f.car.atGate) { toast("Mobil Anda sudah menunggu di gerbang. Pindai QRIS untuk melanjutkan."); return; }
       }
       const c = SP.arriveAtGate(this.world, $("#sp-kind").value);
-      if (!c) { toast("The entry lane is busy. Try again in a moment."); return; }
+      if (!c) { toast("Jalur masuk sedang padat. Coba lagi sebentar lagi."); return; }
       this.sel = c.id; this.track = { id: c.id };
       if (this.level !== 1) this.setLevel(1);
       this.renderFlow();
     };
     const autoSel = () => {
       const f = sel();
-      if (!f) return toast("Select a car first, or press Enter mall.");
+      if (!f) return toast("Pilih mobil dulu, atau tekan Masuk mal.");
       const c = f.car;
-      if (c.atGate) return toast("Scan QRIS first to open the gate.");
-      if (c.mode === "parked") return toast(`Car #${c.id} is already parked in ${SP.code(f.level, c.parked)}.`);
-      if (c.mode === "leaving") return toast(`Car #${c.id} is on its way out.`);
+      if (c.atGate) return toast("Pindai QRIS dulu untuk membuka gerbang.");
+      if (c.mode === "parked") return toast(`Mobil #${c.id} sudah parkir di ${SP.code(f.level, c.parked)}.`);
+      if (c.mode === "leaving") return toast(`Mobil #${c.id} sedang menuju pintu keluar.`);
       const t = SP.parkAnywhere(this.world, c, f.level);
       if (t) {
-        SP.addLog(this.world[f.level], `Auto-select recommended ${SP.code(t.level, t.slot.id)}${t.slot.cat !== "Regular" ? ` (${t.slot.cat})` : ""} for car #${c.id}`);
-        toast(`Recommended slot ${SP.code(t.level, t.slot.id)}${t.slot.cat !== "Regular" ? ` · ${t.slot.cat}` : ""}${t.level !== f.level ? " · via the ramp" : ""}. Navigating now.`);
-      } else toast("Both basements are full for this driver type.");
+        SP.addLog(this.world[f.level], `Pilihan otomatis merekomendasikan ${SP.code(t.level, t.slot.id)}${t.slot.cat !== "Regular" ? ` (${SP.CATS[t.slot.cat].label})` : ""} untuk mobil #${c.id}`);
+        toast(`Slot rekomendasi ${SP.code(t.level, t.slot.id)}${t.slot.cat !== "Regular" ? ` · ${SP.CATS[t.slot.cat].label}` : ""}${t.level !== f.level ? " · lewat ramp" : ""}. Navigasi dimulai.`);
+      } else toast("Kedua basement penuh untuk jenis pengemudi ini.");
       this.renderFlow();
     };
     this.actions = {
@@ -210,18 +225,18 @@ PAGES.smartpark = {
         if (!f) return;
         this.sel = f.car.id;
         SP.leave(this.world, f.car, f.level);
-        SP.addLog(this.world[f.level], `Car #${f.car.id} finished shopping · heading ${f.level === 2 ? "up the ramp to B1, then " : ""}to the exit ramp`);
+        SP.addLog(this.world[f.level], `Mobil #${f.car.id} selesai berbelanja · menuju ${f.level === 2 ? "ramp naik ke B1, lalu " : ""}ramp keluar`);
         this.renderFlow();
       },
     };
     $("#sp-enter").onclick = enter;
     $("#sp-auto").onclick = autoSel;
-    $("#sp-rush").onclick = () => { this.world.queue += 8; SP.addLog(this.world[1], "Rush hour: 8 cars queued at the B1 entry gate"); };
-    $("#sp-traffic").onchange = (e) => { const w = this.world; w.traffic = e.target.checked; w.nextSpawn = w.t; w.nextLeave = w.t + 4; SP.addLog(null, e.target.checked ? "Live traffic on (both basements)" : "Live traffic off"); };
+    $("#sp-rush").onclick = () => { this.world.queue += 8; SP.addLog(this.world[1], "Jam sibuk: 8 mobil mengantre di gerbang masuk B1"); };
+    $("#sp-traffic").onchange = (e) => { const w = this.world; w.traffic = e.target.checked; w.nextSpawn = w.t; w.nextLeave = w.t + 4; SP.addLog(null, e.target.checked ? "Lalu lintas live aktif (kedua basement)" : "Lalu lintas live nonaktif"); };
     $("#sp-follow").onchange = (e) => { this.follow = e.target.checked; };
     $("#sp-reset").onclick = () => {
       this.world = this.newWorld(); this.track = null; this.sel = null; $("#sp-traffic").checked = false;
-      SP.addLog(null, "Simulation reset", "app"); this.setLevel(1);
+      SP.addLog(null, "Simulasi diatur ulang", "app"); this.setLevel(1);
     };
     $("#sp-flow").addEventListener("click", (e) => { const b = e.target.closest("[data-flow]"); if (b && this.actions[b.dataset.flow]) this.actions[b.dataset.flow](); });
 
@@ -260,15 +275,15 @@ PAGES.smartpark = {
   renderFlow() {
     const el = $("#sp-flow"); if (!el) return;
     const stage = this.flowStage(), c = this.trackedCar(), lv = this.trackedLevel();
-    const dest = c ? (c.goal && c.goal.slot ? `${SP.code(c.goal.level, c.goal.slot)} (via the ramp)` : c.target ? SP.code(lv, c.target) : "") : "";
+    const dest = c ? (c.goal && c.goal.slot ? `${SP.code(c.goal.level, c.goal.slot)} (lewat ramp)` : c.target ? SP.code(lv, c.target) : "") : "";
     const steps = [
-      ["Enter the mall", stage === 0 ? `<button class="btn sm primary" data-flow="enter">Enter mall</button>` : `Car #${this.track.id} at the B1 entry gate`],
-      ["Scan QRIS at the gate", stage === 1 ? `<button class="btn sm primary" data-flow="scan">Scan QRIS</button>` : stage > 1 ? "Gate opened" : ""],
-      ["Open the parking map", stage >= 2 ? "Basement 1 &amp; 2 maps with live slot status" : ""],
-      ["Pick a slot or auto-select", stage === 3 ? `Drag the car onto a slot, click a free slot on either basement, or <button class="btn sm" data-flow="autoSel">Auto Park Selected</button>` : stage > 3 ? "Slot chosen" : ""],
-      ["Park", stage === 4 && c ? `Navigating to ${dest}` : stage === 5 && c ? `Parked in ${SP.code(lv, c.parked)}` : stage > 5 ? "Done" : ""],
-      ["Finish your activities", stage === 5 ? `<button class="btn sm" data-flow="finish">Finish &amp; exit</button>` : stage > 5 ? "Done" : ""],
-      ["Exit the mall", stage === 6 ? (lv === 2 ? "Taking the ramp up to Basement 1" : "Driving to the exit ramp") : stage === 7 ? `Exited${this.track.exited.parked ? ` · parked ${this.track.exited.parked}` : ""}. <button class="btn sm" data-flow="enter">Start again</button>` : ""],
+      ["Masuk mal", stage === 0 ? `<button class="btn sm primary" data-flow="enter">Masuk mal</button>` : `Mobil #${this.track.id} di gerbang masuk B1`],
+      ["Pindai QRIS di gerbang", stage === 1 ? `<button class="btn sm primary" data-flow="scan">Pindai QRIS</button>` : stage > 1 ? "Gerbang terbuka" : ""],
+      ["Buka peta parkir", stage >= 2 ? "Peta Basement 1 &amp; 2 dengan status slot terkini" : ""],
+      ["Pilih slot atau otomatis", stage === 3 ? `Seret mobil ke slot, klik slot kosong di basement mana pun, atau <button class="btn sm" data-flow="autoSel">Parkir Otomatis</button>` : stage > 3 ? "Slot dipilih" : ""],
+      ["Parkir", stage === 4 && c ? `Menuju ${dest}` : stage === 5 && c ? `Parkir di ${SP.code(lv, c.parked)}` : stage > 5 ? "Selesai" : ""],
+      ["Selesaikan aktivitas", stage === 5 ? `<button class="btn sm" data-flow="finish">Selesai &amp; keluar</button>` : stage > 5 ? "Selesai" : ""],
+      ["Keluar dari mal", stage === 6 ? (lv === 2 ? "Naik lewat ramp ke Basement 1" : "Menuju ramp keluar") : stage === 7 ? `Sudah keluar${this.track.exited.parked ? ` · parkir ${this.track.exited.parked}` : ""}. <button class="btn sm" data-flow="enter">Mulai lagi</button>` : ""],
     ];
     const cur = stage === 7 ? 7 : stage === 2 ? 3 : stage;
     el.innerHTML = steps.map(([t, d], i) => {
@@ -278,7 +293,7 @@ PAGES.smartpark = {
   },
   openQris() {
     const c = this.trackedCar();
-    if (!c || !c.atGate) { toast("No car is waiting at the gate."); return; }
+    if (!c || !c.atGate) { toast("Tidak ada mobil yang menunggu di gerbang."); return; }
     let r = c.id * 977 + 13; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
     const n = 25, cell = 8; let rects = "";
     const finder = (x, y) => (x < 7 && y < 7) || (x > n - 8 && y < 7) || (x < 7 && y > n - 8);
@@ -289,19 +304,19 @@ PAGES.smartpark = {
       if (on) rects += `<rect x="${x * cell}" y="${y * cell}" width="${cell}" height="${cell}"/>`;
     }
     const m = openModal({
-      title: "Scan QRIS at the gate",
-      body: `<div class="qris"><div class="qris-head"><b>QRIS</b><span>Grand Avenue Mall · Parking entry</span></div>
-        <svg viewBox="-8 -8 ${n * cell + 16} ${n * cell + 16}" width="220" height="220" role="img" aria-label="Demo QR code"><rect x="-8" y="-8" width="${n * cell + 16}" height="${n * cell + 16}" fill="#fff"/><g fill="#111">${rects}</g></svg>
-        <span class="mono muted">Ticket IN-${String(c.id).padStart(5, "0")}</span></div>
-        <p class="muted" style="font-size:13px">Demo only. Scanning creates a parking session for car #${c.id} and opens the gate. No payment is processed.</p>`,
-      foot: `<button class="btn" data-close>Cancel</button><button class="btn primary" id="qris-ok">Simulate successful scan</button>`,
+      title: "Pindai QRIS di gerbang",
+      body: `<div class="qris"><div class="qris-head"><b>QRIS</b><span>Grand Avenue Mall · Masuk parkir</span></div>
+        <svg viewBox="-8 -8 ${n * cell + 16} ${n * cell + 16}" width="220" height="220" role="img" aria-label="Kode QR demo"><rect x="-8" y="-8" width="${n * cell + 16}" height="${n * cell + 16}" fill="#fff"/><g fill="#111">${rects}</g></svg>
+        <span class="mono muted">Tiket IN-${String(c.id).padStart(5, "0")}</span></div>
+        <p class="muted" style="font-size:13px">Hanya demo. Pemindaian membuat sesi parkir untuk mobil #${c.id} dan membuka gerbang. Tidak ada pembayaran yang diproses.</p>`,
+      foot: `<button class="btn" data-close>Batal</button><button class="btn primary" id="qris-ok">Simulasikan pemindaian berhasil</button>`,
     });
     m.querySelector("#qris-ok").onclick = () => {
       closeModal();
       const car = this.trackedCar(); if (!car || !car.atGate) return;
       SP.openGate(this.world, car);
       if (this.level !== 1) this.setLevel(1);
-      toast("Gate open. Parking map ready: pick a slot or use Auto Park Selected.", 3500);
+      toast("Gerbang terbuka. Peta parkir siap: pilih slot atau gunakan Parkir Otomatis.", 3500);
       this.renderFlow();
     };
   },
@@ -310,36 +325,37 @@ PAGES.smartpark = {
     const fe = $("#sp-free"); if (!fe) return;
     const count = (St) => { const k = { free: 0, reserved: 0, occupied: 0 }; SP.SLOTS.forEach((s) => k[St.display[s.id] || "free"]++); return k; };
     const k = count(S);
-    [1, 2].forEach((n) => { const e = $("#lv-free-" + n); if (e) e.textContent = `· ${count(w[n]).free} free`; });
+    [1, 2].forEach((n) => { const e = $("#lv-free-" + n); if (e) e.textContent = `· ${count(w[n]).free} kosong`; });
     fe.textContent = k.free; fe.classList.toggle("full", k.free === 0);
     $("#sp-n-free").textContent = k.free; $("#sp-n-res").textContent = k.reserved; $("#sp-n-occ").textContent = k.occupied;
     $("#sp-bar").innerHTML = `<i style="width:${k.occupied * 2}%;background:var(--bad)"></i><i style="width:${k.reserved * 2}%;background:var(--amber)"></i>`;
     const catFree = (cat) => SP.SLOTS.filter((s) => s.cat === cat && S.display[s.id] === "free").length;
     const catTotal = (cat) => SP.SLOTS.filter((s) => s.cat === cat).length;
     $("#sp-cats").innerHTML = Object.keys(SP.CATS).map((cat) => `<span class="cat-chip" style="--c:var(${SP.CATS[cat].token})"><i>${SP.CATS[cat].glyph}</i>${SP.CATS[cat].label} <b class="num">${catFree(cat)}/${catTotal(cat)}</b></span>`).join("");
-    $("#sp-cat-avail").innerHTML = `<span class="muted" style="font-size:12.5px">Special slots (top-right corner):</span> ` + Object.keys(SP.CATS).map((cat) => `<span>${SP.CATS[cat].label} ${catFree(cat)} of ${catTotal(cat)} free</span>`).join(" · ");
-    $$("#sp-grid [data-slot]").forEach((b) => { const v = S.display[b.dataset.slot] || "free"; b.className = v === "occupied" ? "occ" : v === "reserved" ? "res" : "free"; b.title = `${SP.code(S, b.dataset.slot)}: ${v}${b.dataset.cat !== "Regular" ? " · " + b.dataset.cat : ""}`; });
+    $("#sp-cat-avail").innerHTML = `<span class="muted" style="font-size:12.5px">Slot khusus (pojok kanan atas):</span> ` + Object.keys(SP.CATS).map((cat) => `<span>${SP.CATS[cat].label} ${catFree(cat)} dari ${catTotal(cat)} kosong</span>`).join(" · ");
+    $$("#sp-grid [data-slot]").forEach((b) => { const v = S.display[b.dataset.slot] || "free"; b.className = v === "occupied" ? "occ" : v === "reserved" ? "res" : "free"; b.title = `${SP.code(S, b.dataset.slot)}: ${SLOT_STATE[v]}${b.dataset.cat !== "Regular" ? " · " + SP.CATS[b.dataset.cat].label : ""}`; });
     const ago = (Date.now() - Math.max(w[1].lastReading, w[2].lastReading)) / 1000;
-    $("#sp-gw").textContent = `Simulated gateway · 100 sensors · last reading ${ago < 1 ? "just now" : ago < 60 ? Math.round(ago) + " s ago" : Math.round(ago / 60) + " min ago"}`;
+    $("#sp-gw").textContent = `Gateway simulasi · 100 sensor · pembacaan terakhir ${ago < 1 ? "baru saja" : ago < 60 ? Math.round(ago) + " dtk lalu" : Math.round(ago / 60) + " mnt lalu"}`;
     const f = this.sel ? SP.findCar(w, this.sel) : null;
     const el = $("#sp-sel");
-    if (!f) { el.innerHTML = `<p class="muted">No car selected. Press <b>Enter mall</b> or click a car on the map.</p>`; return; }
+    if (!f) { el.innerHTML = `<p class="muted">Belum ada mobil terpilih. Tekan <b>Masuk mal</b> atau klik mobil di peta.</p>`; return; }
     const c = f.car;
-    const modeTxt = c.atGate ? "Waiting at the gate" : c.mode === "drag" ? "Being moved" : c.mode === "parked" || c.parked ? `Parked in ${SP.code(f.level, c.parked)}` : c.mode === "leaving" ? (f.level === 2 ? "Ramp up to B1, then exit" : "Driving to the exit ramp") : c.mode === "auto" && c.goal && c.goal.slot ? `To ${SP.code(c.goal.level, c.goal.slot)} via the ramp` : c.mode === "auto" && c.target ? `Navigating to ${SP.code(f.level, c.target)}` : "Choosing a slot";
+    const modeTxt = c.atGate ? "Menunggu di gerbang" : c.mode === "drag" ? "Sedang dipindahkan" : c.mode === "parked" || c.parked ? `Parkir di ${SP.code(f.level, c.parked)}` : c.mode === "leaving" ? (f.level === 2 ? "Naik ramp ke B1, lalu keluar" : "Menuju ramp keluar") : c.mode === "auto" && c.goal && c.goal.slot ? `Ke ${SP.code(c.goal.level, c.goal.slot)} lewat ramp` : c.mode === "auto" && c.target ? `Menuju ${SP.code(f.level, c.target)}` : "Memilih slot";
     const pill = c.parked || c.mode === "parked" ? "info" : c.mode === "auto" ? "warn" : c.mode === "leaving" ? "plain" : "ok";
-    el.innerHTML = `<div class="row"><b>Car #${c.id}</b><span class="pill ${pill}">${modeTxt}</span></div>
-      <div class="row"><span class="muted">Now on</span><span>Basement ${f.level}${f.level !== this.level ? ` · <button class="btn ghost sm" style="padding:0 4px" onclick="PAGES.smartpark.setLevel(${f.level})">show</button>` : ""}</span></div>
-      <div class="row"><span class="muted">Driver</span><span>${c.kind === "Regular" ? "Regular" : c.kind}</span></div>
-      <div class="row"><span class="muted">Speed</span><span class="num mono">${Math.round(Math.abs(c.v) * 0.15)} km/h</span></div>
-      <div class="row"><span class="muted">Cars in B1 / B2</span><span class="num mono">${w[1].cars.length} / ${w[2].cars.length}${w.queue ? ` · ${w.queue} queued` : ""}</span></div>`;
+    el.innerHTML = `<div class="row"><b>Mobil #${c.id}</b><span class="pill ${pill}">${modeTxt}</span></div>
+      <div class="row"><span class="muted">Posisi</span><span>Basement ${f.level}${f.level !== this.level ? ` · <button class="btn ghost sm" style="padding:0 4px" onclick="PAGES.smartpark.setLevel(${f.level})">lihat</button>` : ""}</span></div>
+      <div class="row"><span class="muted">Pengemudi</span><span>${SP.kindLabel(c.kind)}</span></div>
+      <div class="row"><span class="muted">Kecepatan</span><span class="num mono">${Math.round(Math.abs(c.v) * 0.15)} km/h</span></div>
+      <div class="row"><span class="muted">Mobil di B1 / B2</span><span class="num mono">${w[1].cars.length} / ${w[2].cars.length}${w.queue ? ` · ${w.queue} antre` : ""}</span></div>`;
   },
   renderLog() {
     const el = $("#sp-log"); if (!el) return;
-    const fmt = (t) => new Date(t).toLocaleTimeString("en-GB", { hour12: false });
+    const fmt = (t) => new Date(t).toLocaleTimeString("id-ID", { hour12: false });
     el.innerHTML = SP.FEED.slice(0, 40).map((l) => `<div class="${l.kind}"><time>${fmt(l.time)}</time><span>${l.kind === "sensor" ? "<b>SENSOR</b> " : ""}${esc(l.msg)}</span></div>`).join("");
   },
   unmount() {
     cancelAnimationFrame(this.raf);
+    delete document.body.dataset.spTheme;
     if (this.ro) this.ro.disconnect(); if (this.mo) this.mo.disconnect(); if (this.mq) this.mq.removeEventListener("change", this.mqf);
     closeModal();
   },

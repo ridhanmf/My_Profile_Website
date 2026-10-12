@@ -31,11 +31,12 @@ const ARTIFACT_VISITOR = `window.claude = { use: async (n) => {
   return null; } };`;
 
 test.describe("routing and layout", () => {
-  for (const route of ["home", "collection", "smartpark", "kos"]) {
+  for (const route of ["home", "collection", "smartpark", "kos", "kos-demo"]) {
     test(`#${route} renders without errors (desktop + mobile)`, async ({ page }) => {
       const errors = watchErrors(page);
       await page.goto(`/#${route}`);
-      await expect(page.locator(`.nav a[data-route="${route}"]`)).toHaveAttribute("aria-current", "page");
+      if (route === "home" || route === "collection") await expect(page.locator(`.nav > a[data-route="${route}"]`)).toHaveAttribute("aria-current", "page");
+      else await expect(page.locator("#nav-proj")).toHaveAttribute("aria-current", "page");
       await expect(page.locator("body")).toHaveAttribute("data-page", route);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForTimeout(300);
@@ -44,14 +45,41 @@ test.describe("routing and layout", () => {
     });
   }
 
-  test("nav links switch pages and unknown hashes fall back to home", async ({ page }) => {
+  test("navbar: Home, MyCollection and a Project menu with SmartPark and KostBills", async ({ page }) => {
     await page.goto("/#does-not-exist");
     await expect(page.locator("body")).toHaveAttribute("data-page", "home");
-    await page.click('.nav a[data-route="kos"]');
+    expect(await page.locator(".nav > a").allInnerTexts()).toEqual(["Home", "MyCollection"]);
+    await expect(page.locator("#nav-proj")).toHaveText(/Project/);
+    await expect(page.locator("#nav-menu")).toBeHidden();
+    await page.click("#nav-proj");
+    await expect(page.locator("#nav-proj")).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#nav-menu a")).toHaveCount(2);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#nav-menu")).toBeHidden();
+    await page.click("#nav-proj");
+    await page.click('#nav-menu a[data-route="smartpark"]');
+    await expect(page).toHaveURL(/#smartpark$/);
+    await expect(page.locator("#nav-menu")).toBeHidden();
+    await page.click("#nav-proj");
+    await page.click('#nav-menu a[data-route="kos"]');
     await expect(page).toHaveURL(/#kos$/);
-    await expect(page.locator(".kos-hero h1")).toHaveText("KostBills");
-    await page.click('.nav a[data-route="collection"]');
+    await expect(page.locator(".kl-title")).toBeVisible();
+    await page.click("#nav-proj");
+    await page.mouse.click(20, 400);
+    await expect(page.locator("#nav-menu")).toBeHidden();
+    await page.click('.nav > a[data-route="collection"]');
     await expect(page.locator(".col-stat")).toContainText("Total Items");
+  });
+
+  test("Project menu works on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#home");
+    await page.click("#nav-proj");
+    const box = await page.locator("#nav-menu").boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await page.click('#nav-menu a[data-route="kos"]');
+    await expect(page).toHaveURL(/#kos$/);
   });
 
   test("theme switch cycles Auto → Light → Dark and is remembered", async ({ page }) => {
@@ -115,7 +143,7 @@ test.describe("admin (standalone build)", () => {
     await page.click("#f-save");
     await expect(page.locator(".car")).toHaveCount(1);
     await expect(page.locator(".col-stat")).toContainText("1");
-    await expect(page.locator(".car .btn.wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+\?text=/);
+    await expect(page.locator(".car .btn.wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=/);
     await expect(page.locator("#sb-pub")).toHaveText("Export site data");
 
     const [download] = await Promise.all([page.waitForEvent("download"), page.click("#sb-pub")]);
@@ -178,8 +206,8 @@ test.describe("SmartPark", () => {
   test("enter → QRIS → auto park → finish & exit", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/#smartpark");
-    await expect(page.locator("#sp-sel")).toContainText("No car selected");
-    for (const k of ["EV", "Ladies", "VIP"]) await expect(page.locator("#sp-cats")).toContainText(k);
+    await expect(page.locator("#sp-sel")).toContainText("Belum ada mobil terpilih");
+    for (const k of ["EV", "Wanita", "VIP"]) await expect(page.locator("#sp-cats")).toContainText(k);
     expect(await page.evaluate(() => SP.GEO[1].N.ENT[1] === 674 && SP.GEO[1].N.EXIT[1] === 674)).toBe(true);
 
     await page.selectOption("#sp-kind", "EV");
@@ -188,13 +216,13 @@ test.describe("SmartPark", () => {
     await expect(page.locator(".qris svg")).toHaveCount(1);
     await page.click("#qris-ok");
     await page.locator('[data-flow="autoSel"]').click({ timeout: 20_000 });
-    await expect(page.locator("#sp-sel")).toContainText(/Parked in B[12]-/, { timeout: 40_000 });
+    await expect(page.locator("#sp-sel")).toContainText(/Parkir di B[12]-/, { timeout: 40_000 });
     await expect(page.locator("#sp-log")).toContainText("SENSOR", { timeout: 10_000 });
 
     await page.locator('[data-flow="finish"]').click();
-    await expect(page.locator("#sp-flow")).toContainText("Exited", { timeout: 60_000 });
+    await expect(page.locator("#sp-flow")).toContainText("Sudah keluar", { timeout: 60_000 });
     await page.click('[data-level="2"]');
-    await expect(page.locator("#sp-av-title")).toContainText("Basement 2");
+    await expect(page.locator("#sp-av-title")).toContainText("Ketersediaan · Basement 2");
     expect(errors).toEqual([]);
   });
 
@@ -202,17 +230,77 @@ test.describe("SmartPark", () => {
     await page.goto("/#smartpark");
     await page.click("#sp-enter");
     await page.click("#sp-reset");
-    const modalBtn = page.locator(".modal .btn.danger, .modal .btn.primary").last();
-    if (await modalBtn.count()) await modalBtn.click();
-    await expect(page.locator("#sp-sel")).toContainText("No car selected");
+    await expect(page.locator("#sp-sel")).toContainText("Belum ada mobil terpilih");
+  });
+
+  test("Modern / Tradisional theme switch is applied, remembered and keeps the map working", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#smartpark");
+    await expect(page.locator('[data-sptheme="modern"]')).toHaveAttribute("aria-pressed", "true");
+    const modernBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    await page.click('[data-sptheme="tradisional"]');
+    await expect(page.locator("body")).toHaveAttribute("data-sp-theme", "tradisional");
+    const trad = await page.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, img: getComputedStyle(document.body).backgroundImage, map: SP.colors().asphalt }));
+    expect(trad.bg).not.toBe(modernBg);
+    expect(trad.img).toContain("data:image/svg+xml");
+    expect(trad.map).toBe("#2a2126");
+    await page.reload();
+    await expect(page.locator('[data-sptheme="tradisional"]')).toHaveAttribute("aria-pressed", "true");
+    await page.click("#sp-enter");
+    await expect(page.locator("#sp-sel")).toContainText("Menunggu di gerbang");
+    await page.click('.nav > a[data-route="home"]');
+    await expect(page.locator("body")).not.toHaveAttribute("data-sp-theme", /.+/);
+    expect(errors).toEqual([]);
   });
 });
 
 test.describe("KostBills", () => {
-  test("filters, Due Soon, Rp850.000 payment, overpayment rejected, CSV export", async ({ page }) => {
+  test("landing page: language switch, feature tabs, simulator, WhatsApp, Coba Demo and back", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/#kos");
-    await expect(page.locator(".kpi-row").first()).toContainText("Total Collected This Year");
+    await expect(page.locator(".kl-title")).toContainText("Tagihan 1.000 kamar kos");
+    await expect(page.locator("#kl-demo")).toHaveText(/Coba Demo KostBills/);
+    await page.click('[data-lang="en"]');
+    await expect(page.locator(".kl-title")).toContainText("Billing for 1,000 rooms");
+    await expect(page.locator("#kl-demo")).toHaveText(/Try the KostBills Demo/);
+    await page.reload();
+    await expect(page.locator(".kl-title")).toContainText("Billing for 1,000 rooms");
+    await page.click('[data-lang="id"]');
+    await expect(page.locator(".kl-title")).toContainText("Tagihan 1.000 kamar kos");
+
+    for (const k of ["rooms", "bills", "status", "reminder", "wa", "reports"]) {
+      await page.click(`[data-feature="${k}"]`);
+      await expect(page.locator(`[data-feature="${k}"]`)).toHaveAttribute("aria-selected", "true");
+    }
+    await page.click('[data-feature="wa"]');
+    await expect(page.locator(".kl-bubble")).toContainText("Mohon segera melakukan pembayaran");
+    await expect(page.locator(".kl-chat a.kl-btn-wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=/);
+    await expect(page.locator(".kl-hero a.kl-btn-wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=/);
+    await page.click('[data-feature="bills"]');
+    await page.click("[data-gen]");
+    await expect(page.locator("#kl-gen")).toContainText("tagihan dibuat");
+
+    await page.locator("#klc-rooms").fill("500");
+    await page.locator("#klc-rate").fill("100");
+    await expect(page.locator("#klc-month")).toHaveText("Rp 425 jt");
+
+    await page.click("#kl-demo");
+    await expect(page).toHaveURL(/#kos-demo$/);
+    await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
+    await page.goBack();
+    await expect(page).toHaveURL(/#kos$/);
+    await expect(page.locator(".kl-title")).toBeVisible();
+    await page.goForward();
+    await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
+    await page.click(".kos-back");
+    await expect(page).toHaveURL(/#kos$/);
+    expect(errors).toEqual([]);
+  });
+
+  test("demo: filters, Due Soon, Rp850.000 payment, overpayment rejected, WhatsApp reminder, CSV export", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-demo");
+    await expect(page.locator(".kpi-row").first()).toContainText("Total Terkumpul Tahun Ini");
     const stats = await page.evaluate(() => ({
       rooms: KOS.D.rooms.length,
       nonFlat: KOS.D.bills.filter((b) => KOS.total(b) !== 850000).length,
@@ -226,20 +314,21 @@ test.describe("KostBills", () => {
     await page.selectOption("#kb-status", "Due Soon");
     const pills = await page.locator("table.t tbody .pill").allInnerTexts();
     expect(pills.length).toBeGreaterThan(0);
-    expect(new Set(pills)).toEqual(new Set(["Due Soon"]));
+    expect(new Set(pills)).toEqual(new Set(["Segera jatuh tempo"]));
+    await expect(page.locator("table.t tbody .wa-ic").first()).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=Halo/);
 
     await page.locator("[data-pay]").first().click();
     await expect(page.locator("#py-amt")).toHaveValue("850000");
     await page.fill("#py-amt", "900000");
     await page.click("#py-save");
-    await expect(page.locator("#py-err")).toContainText(/balance is/i);
+    await expect(page.locator("#py-err")).toContainText("Sisa tagihan");
     await page.fill("#py-amt", "850000");
     await page.click("#py-save");
     await expect(page.locator(".toast")).toContainText("Rp 850.000");
 
     await page.selectOption("#kb-status", "");
     const [download] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="csv-bills"]')]);
-    expect(download.suggestedFilename()).toMatch(/^kostbills-bills-.*\.csv$/);
+    expect(download.suggestedFilename()).toMatch(/^kostbills-tagihan-.*\.csv$/);
     const csv = readFileSync(await download.path(), "utf8");
     expect(csv.split("\n")[0]).toContain("Invoice");
 

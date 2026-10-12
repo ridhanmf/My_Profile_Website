@@ -145,7 +145,7 @@ function openProfileEditor() {
     body: `<div class="form-grid">
       <label class="field"><span>Name</span><input class="input" id="pf-name" value="${esc(p.name)}"></label>
       <label class="field"><span>Location</span><input class="input" id="pf-loc" value="${esc(p.location)}"></label>
-      <label class="field"><span>WhatsApp number for purchases (country code, digits only)</span><input class="input" id="pf-wa" inputmode="numeric" value="${esc(p.whatsapp || "")}"></label>
+      <label class="field"><span>WhatsApp number (e.g. 081224504181), used by every WhatsApp button</span><input class="input" id="pf-wa" inputmode="tel" value="${esc(p.whatsapp || "")}"></label>
       <label class="field"><span>Role tags (comma separated)</span><input class="input" id="pf-roles" value="${esc((p.roles || []).join(", "))}"></label>
       <label class="field full"><span>About</span><textarea class="input" id="pf-about" rows="4">${esc(p.about)}</textarea></label>
       <label class="field full"><span>What I do — one card per line: Title :: description :: chip, chip</span><textarea class="input" id="pf-focus" rows="3">${esc(focusTxt)}</textarea></label>

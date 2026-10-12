@@ -1,13 +1,16 @@
 # Ridhan Firdaus — Portfolio
 
-A personal portfolio for **Ridhan Firdaus**, an IT graduate working across data analysis, network operations (NOC), web development and AI. The four pages live under one domain:
+A personal portfolio for **Ridhan Firdaus**, an IT graduate working across data analysis, network operations (NOC), web development and AI. Everything lives under one domain.
+
+The navbar has three entries: **Home**, **MyCollection** and **Project**. Project opens a menu with SmartPark and KostBills. Both project pages are in Bahasa Indonesia.
 
 | Page | What it is |
 |---|---|
 | **Home** (`#home`) | Introduction, roles (Data Analyst · NOC Engineer · Web Developer · AI Engineer), skills, contacts and four project cards: YourMajor Recommendation, Sneaker Analyst, Flight Price Prediction and Car Logo Prediction. |
 | **My Collection** (`#collection`) | A diecast car garage. Visitors can browse, search and filter, and each car has a WhatsApp "buy" button. The admin can add, edit and delete cars with photos, brand, scale, condition and price. |
-| **SmartPark** (`#smartpark`) | An IoT smart-parking demo for a two-level mall basement with 50 slots per level. You enter at the gate, pay with QRIS, then auto-park or drag a car onto a slot. A car can drive B1 → ramp → B2 → ramp → B1 → exit. Traffic keeps left, as in Indonesia, and slot sensors are simulated with a short delay. |
-| **KostBills** (`#kos`) | A billing dashboard for a 1,000-room boarding house. It covers tenants, room availability, monthly bills (flat Rp850.000 all-in, electricity on prepaid token), payment status (Paid, Partial, Unpaid, Due Soon, Overdue), transactions, revenue reports, month/year filters, CSV export and PDF invoices and reports. |
+| **SmartPark** (`#smartpark`) | An IoT smart-parking demo for a two-level mall basement with 50 slots per level. You enter at the gate, pay with QRIS, then auto-park or drag a car onto a slot. A car can drive B1 → ramp → B2 → ramp → B1 → exit. Traffic keeps left, as in Indonesia, and slot sensors are simulated with a short delay. A **Modern / Tradisional** switch changes the look; Tradisional uses a subtle batik kawung pattern and tumpal border in sogan, indigo and gold, and the choice is remembered. |
+| **KostBills** (`#kos`) | A promotional landing page with an ID/EN language switch. It covers the hero, a live dashboard visual, illustrative stats, interactive feature tabs, how it works, a revenue simulator, FAQ and WhatsApp contact. **Coba Demo KostBills** opens the demo. |
+| **KostBills demo** (`#kos-demo`) | A billing dashboard for a 1,000-room boarding house. It covers tenants, room availability, monthly bills (flat Rp850.000 all-in, electricity on prepaid token), payment status (Paid, Partial, Unpaid, Due Soon, Overdue), transactions, revenue reports, month/year filters, CSV export, PDF invoices and reports, and one-click WhatsApp reminders. A back link returns to the landing page. |
 
 Everything runs in the browser with no backend and no paid map APIs. SmartPark draws its map on a `<canvas>`. KostBills keeps its demo data in `localStorage`, so a reset restores a fresh dataset.
 
@@ -95,11 +98,12 @@ npm test             # both
 The end-to-end tests build a separate copy of the page using the **test-only** credentials in `tests/fixtures/` and serve it on port 4174. They cover:
 
 - every route on desktop and mobile, with no console errors and no horizontal scroll
-- navigation and the theme switch
+- the navbar and its Project menu (desktop and mobile, Escape and outside click), and the theme switch
 - admin sign-in, a rejected wrong password, lockout, adding a car, the WhatsApp link and exporting `site.json`
 - artifact-mode publishing, including a byte-for-byte self-rebuild check
-- the full SmartPark journey
-- KostBills filters, the Rp850.000 payment rule, overpayment rejection, CSV export and pagination
+- the full SmartPark journey and the Modern / Tradisional switch
+- the KostBills landing page: ID/EN switch, feature tabs, revenue simulator, WhatsApp links, Coba Demo and back navigation
+- the KostBills demo: filters, the Rp850.000 payment rule, overpayment rejection, WhatsApp reminders, CSV export and pagination
 
 ## Deploying
 
@@ -110,7 +114,7 @@ The output is a single static file, `dist/index.html`, and any static host works
 
 ## Notes
 
-- The WhatsApp number on the collection page is a placeholder (`6281234567890`). Change `profile.whatsapp` in `src/data/site.json`.
+- Every WhatsApp button uses `profile.whatsapp` in `src/data/site.json` (currently `081224504181`). The local `08…` form is turned into `62…` for wa.me automatically. In the KostBills demo, reminders go to this number, not to the sample tenants.
 - The SmartPark sensor feed is a simulation. Readings arrive with a short delay to mimic real ultrasonic sensors, but no hardware is involved.
 - KostBills uses generated demo data. The names and phone numbers are fictional.
 - `legacy/v1/` holds the original single-page portfolio that used to live at the repository root.

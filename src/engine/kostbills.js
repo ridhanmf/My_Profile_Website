@@ -4,11 +4,15 @@ const KOS = (() => {
   /* Billing rule: one flat rent that already includes cleaning, security and maintenance.
      Electricity is a prepaid token bought by the tenant, so it never appears on a bill. */
   const RENT = 850000;
-  const INCLUDED = "Includes cleaning, security and maintenance. Electricity uses the tenant's own prepaid token and is not billed.";
+  const INCLUDED = "Sudah termasuk kebersihan, keamanan, dan perawatan. Listrik memakai token prabayar milik penghuni dan tidak ditagihkan.";
   const DUE_SOON_DAYS = 7;
   const METHODS = ["Transfer BCA", "QRIS", "Transfer Mandiri", "Transfer BRI", "Cash"];
   const STATUSES = ["Paid", "Partial", "Unpaid", "Due Soon", "Overdue"];
-  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  /* Internal keys stay in English (stored data, filters); these are the Indonesian display labels. */
+  const STATUS_LABEL = { Paid: "Lunas", Partial: "Dibayar sebagian", Unpaid: "Belum bayar", "Due Soon": "Segera jatuh tempo", Overdue: "Terlambat" };
+  const ROOM_LABEL = { Occupied: "Terisi", Vacant: "Kosong", Maintenance: "Perbaikan", Reserved: "Dipesan" };
+  const methodLabel = (m) => (m === "Cash" ? "Tunai" : m);
   const FIRST = ["Andi", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hendra", "Indah", "Joko", "Kartika", "Lestari", "Made", "Nanda", "Oktavia", "Putri", "Rizky", "Sari", "Taufik", "Utami", "Vina", "Wahyu", "Yogi", "Zahra", "Agus", "Bayu", "Dimas", "Fitri", "Galih", "Hana", "Irfan", "Jihan", "Kevin", "Laras", "Mega", "Nur", "Oki", "Pandu", "Rani", "Satria", "Tiara", "Wulan", "Yusuf", "Aulia", "Bima", "Cahya", "Dinda", "Farhan", "Ilham", "Nabila"];
   const LAST = ["Pratama", "Saputra", "Wijaya", "Hidayat", "Santoso", "Kusuma", "Nugroho", "Lestari", "Siregar", "Harahap", "Setiawan", "Rahmawati", "Putra", "Wibowo", "Utomo", "Simanjuntak", "Gunawan", "Fauzi", "Maharani", "Permana", "Ramadhan", "Susanto", "Halim", "Purnomo", "Anggraini", "Nasution", "Firmansyah", "Sihombing"];
   const JOBS = ["Mahasiswa", "Mahasiswa", "Mahasiswa", "Karyawan swasta", "Karyawan swasta", "Perawat", "Guru", "Programmer", "Staf bank", "Wiraswasta", "Desainer", "Admin kantor"];
@@ -149,7 +153,7 @@ const KOS = (() => {
   }
   function summary(m) { return { m, ...sumBills(D.bills.filter((b) => b.month === m)) }; }
   function collectedInYear(y) { return D.trx.filter((t) => t.date.slice(0, 4) === y).reduce((s, t) => s + t.amount, 0); }
-  return { BLOCKS, RENT, INCLUDED, METHODS, STATUSES, MONTHS, DUE_SOON_DAYS, load, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
+  return { STATUS_LABEL, ROOM_LABEL, methodLabel, BLOCKS, RENT, INCLUDED, METHODS, STATUSES, MONTHS, DUE_SOON_DAYS, load, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
 })();
 
 function kosSummary() {

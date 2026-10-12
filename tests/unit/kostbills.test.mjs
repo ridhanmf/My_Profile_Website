@@ -19,7 +19,9 @@ test("demo data: 1,000 rooms in blocks A–J, 4 floors × 25 rooms", () => {
 test("billing rule: every bill is the flat Rp850.000 rent, nothing else (no electricity line)", () => {
   const { KOS } = fresh();
   assert.equal(KOS.RENT, 850000);
-  assert.match(KOS.INCLUDED, /prepaid token/i);
+  assert.match(KOS.INCLUDED, /token prabayar/i);
+  assert.equal(KOS.STATUS_LABEL["Due Soon"], "Segera jatuh tempo");
+  assert.equal(KOS.monthLabel("2026-08"), "Agustus 2026");
   assert.ok(KOS.D.bills.length > 1000);
   KOS.D.bills.forEach((b) => {
     assert.equal(KOS.total(b), 850000);

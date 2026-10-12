@@ -10,7 +10,7 @@ body[data-page="smartpark"] {
   color-scheme: dark; background: var(--bg); color: var(--ink);
 }
 body[data-page="smartpark"] .topbar { background: color-mix(in srgb, #0a1220 86%, transparent); border-bottom-color: #1a283d; }
-body[data-page="smartpark"] .nav a[aria-current="page"] { background: var(--accent); color: #fff; }
+body[data-page="smartpark"] .nav a[aria-current="page"], body[data-page="smartpark"] .nav-proj[aria-current="page"] { background: var(--accent); color: #fff; }
 body[data-page="smartpark"] .nav a:hover { background: #142237; }
 body[data-page="smartpark"] .brand-mark { background: var(--accent); color: #fff; }
 body[data-page="smartpark"] .footer { border-top-color: #172437; }
@@ -33,3 +33,57 @@ body[data-page="smartpark"] .sp-card h3 { color: #7fd8cb; }
 body[data-page="smartpark"] .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 body[data-page="smartpark"] .slot-grid button.occ { background: #b4475a; }
 body[data-page="smartpark"] .flow li.done .n { background: var(--ok); color: #04201c; }
+
+/* ---------- SmartPark: theme switch (Modern / Tradisional) ---------- */
+.sp-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; width: 100%; }
+.sp-theme { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sp-theme button { color: rgba(232, 239, 248, .85); transition: background .2s, color .2s; }
+.sp-theme button:hover { color: #fff; }
+
+/* Tradisional: batik palette — indigo night, sogan brown, gold (prada) and cream — over a faint kawung
+   pattern, with a tumpal border under the header. The parking tech stays teal so states read clearly. */
+body[data-page="smartpark"][data-sp-theme="tradisional"] {
+  --bg: #17121a; --surface: #211a22; --surface-2: #2a212a; --ink: #f4ecdc; --ink-2: #dacdb6; --muted: #a8977e;
+  --line: #3b2f30; --line-2: #2f2528; --accent: #d4a64a; --accent-ink: #1d1206; --accent-soft: #3b2d17;
+  --ok: #4fb8a3; --ok-soft: #173029; --bad: #e57a62; --bad-soft: #3d1f1b; --amber: #e7b65a; --amber-soft: #3a2b15;
+  --warn: #e7b65a; --warn-soft: #3a2b15; --ev: #4fb8c4; --ladies: #e08bb0; --vip: #b49cf0;
+  --asphalt: #2a2126; --asphalt-2: #1d171b; --road: #33292e; --pillar: #4a3a36; --paint: #efe4cc; --paint-y: #d4a64a;
+  --building: #120d11; --building-ink: #e8dcc3;
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none' stroke='rgba(212,166,74,.085)' stroke-width='1.1'%3E%3Cellipse cx='24' cy='11.5' rx='6.5' ry='10'/%3E%3Cellipse cx='24' cy='36.5' rx='6.5' ry='10'/%3E%3Cellipse cx='11.5' cy='24' rx='10' ry='6.5'/%3E%3Cellipse cx='36.5' cy='24' rx='10' ry='6.5'/%3E%3Ccircle cx='24' cy='24' r='1.6' fill='rgba(212,166,74,.085)'/%3E%3Ccircle cx='0' cy='0' r='2.4'/%3E%3Ccircle cx='48' cy='0' r='2.4'/%3E%3Ccircle cx='0' cy='48' r='2.4'/%3E%3Ccircle cx='48' cy='48' r='2.4'/%3E%3Cpath d='M24 5v4M24 39v4M5 24h4M39 24h4'/%3E%3C/svg%3E") repeat; background-size: 56px 56px;
+}
+body[data-page="smartpark"][data-sp-theme="tradisional"] .topbar { background: color-mix(in srgb, #17121a 88%, transparent); border-bottom-color: #3b2f30; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .nav a[aria-current="page"],
+body[data-page="smartpark"][data-sp-theme="tradisional"] .nav-proj[aria-current="page"],
+body[data-page="smartpark"][data-sp-theme="tradisional"] .brand-mark { background: var(--accent); color: var(--accent-ink); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .nav a:hover { background: #2a212a; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .footer { border-top-color: #2f2528; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero { background-color: #17121a; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero::before {
+  background:
+    linear-gradient(90deg, rgba(28, 16, 14, .95) 0%, rgba(34, 20, 24, .84) 40%, rgba(24, 18, 40, .45) 78%, rgba(24, 18, 40, .30) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none' stroke='rgba(230,190,110,.14)' stroke-width='1.1'%3E%3Cellipse cx='24' cy='11.5' rx='6.5' ry='10'/%3E%3Cellipse cx='24' cy='36.5' rx='6.5' ry='10'/%3E%3Cellipse cx='11.5' cy='24' rx='10' ry='6.5'/%3E%3Cellipse cx='36.5' cy='24' rx='10' ry='6.5'/%3E%3Ccircle cx='24' cy='24' r='1.6' fill='rgba(230,190,110,.14)'/%3E%3Ccircle cx='0' cy='0' r='2.4'/%3E%3Ccircle cx='48' cy='0' r='2.4'/%3E%3Ccircle cx='0' cy='48' r='2.4'/%3E%3Ccircle cx='48' cy='48' r='2.4'/%3E%3Cpath d='M24 5v4M24 39v4M5 24h4M39 24h4'/%3E%3C/svg%3E") 0 0 / 52px 52px,
+    linear-gradient(to bottom, transparent 70%, #17121a 100%);
+}
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; z-index: -1; opacity: .85;
+  background:
+    linear-gradient(135deg, #d4a64a 25%, transparent 25%) -7px 0 / 14px 14px,
+    linear-gradient(225deg, #d4a64a 25%, transparent 25%) -7px 0 / 14px 14px;
+}
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero .eyebrow,
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-card h3 { color: #e2bf72; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero h1 { color: #f6ead0; text-shadow: 0 2px 18px rgba(0, 0, 0, .45); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero p { color: rgba(246, 236, 216, .92); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero-facts span { background: rgba(212, 166, 74, .12); border-color: rgba(212, 166, 74, .38); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-theme { background: rgba(212, 166, 74, .10); border-color: rgba(212, 166, 74, .45); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-canvas-wrap { box-shadow: inset 0 0 0 1px #4a3a36, 0 0 0 1px rgba(212, 166, 74, .18); }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .slot-grid button.occ { background: #b5533f; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .flow li.done .n { background: var(--ok); color: #0b1f1a; }
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-side .panel,
+body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-stage { background: var(--surface); }
+@media (max-width: 720px) {
+  body[data-page="smartpark"][data-sp-theme="tradisional"] .sp-hero::before {
+    background: linear-gradient(180deg, rgba(28, 16, 14, .82) 0%, rgba(28, 18, 24, .94) 75%, #17121a 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none' stroke='rgba(230,190,110,.14)' stroke-width='1.1'%3E%3Cellipse cx='24' cy='11.5' rx='6.5' ry='10'/%3E%3Cellipse cx='24' cy='36.5' rx='6.5' ry='10'/%3E%3Cellipse cx='11.5' cy='24' rx='10' ry='6.5'/%3E%3Cellipse cx='36.5' cy='24' rx='10' ry='6.5'/%3E%3Ccircle cx='24' cy='24' r='1.6' fill='rgba(230,190,110,.14)'/%3E%3Ccircle cx='0' cy='0' r='2.4'/%3E%3Ccircle cx='48' cy='0' r='2.4'/%3E%3Ccircle cx='0' cy='48' r='2.4'/%3E%3Ccircle cx='48' cy='48' r='2.4'/%3E%3Cpath d='M24 5v4M24 39v4M5 24h4M39 24h4'/%3E%3C/svg%3E") 0 0 / 52px 52px;
+  }
+}

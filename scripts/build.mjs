@@ -27,7 +27,7 @@ const FRAGMENT = args.includes("--fragment");
 const JS_FILES = [
   "lib/utils.js", "core/site-data.js", "lib/ui.js", "core/platform.js", "core/admin.js", "core/router.js",
   "lib/illustrations.js", "engine/smartpark.js", "engine/kostbills.js",
-  "pages/home.js", "pages/collection.js", "pages/smartpark.js", "pages/kostbills.js", "main.js",
+  "pages/home.js", "pages/collection.js", "pages/smartpark.js", "pages/kostbills.js", "pages/kostbills-landing.js", "main.js",
 ];
 
 const FONTS =

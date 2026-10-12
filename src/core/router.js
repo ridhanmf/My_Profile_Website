@@ -1,11 +1,13 @@
 /* ---------- Router ---------- */
 const PAGES = {};
-const NAV = [
-  ["home", "Home"],
-  ["collection", "My Collection"],
-  ["smartpark", "SmartPark"],
-  ["kos", "KostBills"],
+/* Top-level links, and the projects grouped under the "Project" menu. */
+const NAV = [["home", "Home"], ["collection", "MyCollection"]];
+const PROJECT_NAV = [
+  ["smartpark", "SmartPark", "Navigasi parkir mal · simulasi IoT", '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>'],
+  ["kos", "KostBills", "Manajemen tagihan kos 1.000 kamar", '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/>'],
 ];
+const ROUTE_TITLE = { home: "Home", collection: "MyCollection", smartpark: "SmartPark", kos: "KostBills", "kos-demo": "Demo KostBills" };
+const PROJECT_OF = { smartpark: "smartpark", kos: "kos", "kos-demo": "kos" };
 let current = null;
 function routeName() {
   const h = (location.hash || "").replace(/^#/, "");
@@ -25,14 +27,35 @@ function route() {
   current = PAGES[name];
   document.body.dataset.page = name;
   current.mount(view);
-  $$(".nav a").forEach((a) => a.setAttribute("aria-current", a.dataset.route === name ? "page" : "false"));
+  $$(".nav > a").forEach((a) => a.setAttribute("aria-current", a.dataset.route === name ? "page" : "false"));
+  $("#nav-proj").setAttribute("aria-current", PROJECT_OF[name] ? "page" : "false");
+  $$("#nav-menu a").forEach((a) => a.setAttribute("aria-current", String(a.dataset.route === PROJECT_OF[name])));
+  closeProjectMenu();
   const p = SITE.profile || {};
-  document.title = name === "home" ? (p.name || "Portfolio") : `${NAV.find((n) => n[0] === name)[1]} · ${p.name || "Portfolio"}`;
+  document.title = name === "home" ? (p.name || "Portfolio") : `${ROUTE_TITLE[name]} · ${p.name || "Portfolio"}`;
   renderSaveBar();
   if (!routing.first) window.scrollTo(0, 0);
   routing.first = false;
 }
 const routing = { first: true };
+
+/* ---------- Project menu ---------- */
+function setProjectMenu(open) {
+  const b = $("#nav-proj"), m = $("#nav-menu"); if (!b || !m) return;
+  b.setAttribute("aria-expanded", String(open)); m.hidden = !open;
+}
+const closeProjectMenu = () => setProjectMenu(false);
+function wireProjectMenu() {
+  const b = $("#nav-proj"), m = $("#nav-menu");
+  b.onclick = (e) => { e.stopPropagation(); const open = b.getAttribute("aria-expanded") !== "true"; setProjectMenu(open); if (open) m.querySelector("a").focus({ preventScroll: true }); };
+  m.addEventListener("click", (e) => { if (e.target.closest("a")) closeProjectMenu(); });
+  m.addEventListener("keydown", (e) => {
+    const items = $$("a", m), i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus(); }
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest("#nav-drop")) closeProjectMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && b.getAttribute("aria-expanded") === "true") { closeProjectMenu(); b.focus(); } });
+}
 
 function renderChrome() {
   const p = adminData().profile || {};
@@ -77,12 +100,18 @@ function boot() {
   <header class="topbar"><div class="wrap">
     <a class="brand" href="#home" aria-label="Home"><span class="brand-mark" id="brand-mark">R</span><span class="brand-name" id="brand-name"></span></a>
     <span id="admin-slot"></span>
-    <nav class="nav" aria-label="Pages">${NAV.map(([k, l]) => `<a href="#${k}" data-route="${k}">${l}</a>`).join("")}</nav>
+    <nav class="nav" aria-label="Halaman">${NAV.map(([k, l]) => `<a href="#${k}" data-route="${k}">${l}</a>`).join("")}
+      <div class="nav-drop" id="nav-drop">
+        <button class="nav-proj" id="nav-proj" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu">Project <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="nav-menu" id="nav-menu" hidden>${PROJECT_NAV.map(([k, l, d, ic]) => `<a href="#${k}" data-route="${k}"><span class="nm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg></span><b>${l}</b><small>${d}</small></a>`).join("")}</div>
+      </div>
+    </nav>
     ${STANDALONE ? `<button class="theme-btn" id="theme-btn" type="button"><i aria-hidden="true"></i><span>Auto</span></button>` : ""}
   </div></header>
   <main id="view"></main>
   <footer class="footer"><div class="wrap"><span id="foot-name"></span><span><button class="btn ghost sm" id="admin-open" style="padding:2px 6px;color:var(--muted)">${ICON.lock} Admin login</button></span></div></footer>`;
   $("#admin-open").onclick = openAdminDialog;
+  wireProjectMenu();
   if (STANDALONE) { $("#theme-btn").onclick = THEME.cycle; THEME.apply(THEME.get()); }
   renderChrome();
   window.addEventListener("hashchange", route);
