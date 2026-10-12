@@ -1,0 +1,210 @@
+{
+  "v": 1,
+  "rev": 0,
+  "profile": {
+    "name": "Ridhan Firdaus",
+    "location": "Indonesia",
+    "roles": [
+      "IT Graduate",
+      "Data Analyst",
+      "NOC Engineer",
+      "Web Developer",
+      "AI Engineer"
+    ],
+    "about": "I'm an IT graduate working across four connected areas. As a data analyst I turn raw records into clean datasets, dashboards and reports that drive decisions. As a NOC engineer I monitor networks, triage incidents and keep services up. As a web developer I build responsive web apps from interface to database, and as an AI engineer I apply machine learning and LLMs to automate work and surface insights. The projects below bring these skills together.",
+    "focus": [
+      {
+        "code": "Analysis",
+        "title": "Data Analyst",
+        "text": "Cleaning and modelling data, writing queries, and building dashboards and recurring reports that answer a specific business question.",
+        "chips": [
+          "SQL",
+          "Excel",
+          "Python (pandas)",
+          "Power BI",
+          "Data cleaning",
+          "Reporting"
+        ]
+      },
+      {
+        "code": "Infrastructure",
+        "title": "NOC Engineer",
+        "text": "Monitoring network health 24/7, responding to incidents, and keeping devices, links and documentation in order so services stay up.",
+        "chips": [
+          "TCP/IP & subnetting",
+          "Routing & switching",
+          "VLAN",
+          "Network monitoring",
+          "Incident handling",
+          "Troubleshooting"
+        ]
+      },
+      {
+        "code": "Web",
+        "title": "Web Developer",
+        "text": "Building responsive web apps end to end: interfaces, REST APIs and databases, shipped with clean, maintainable code.",
+        "chips": [
+          "HTML & CSS",
+          "JavaScript",
+          "PHP",
+          "MySQL",
+          "REST APIs",
+          "Git"
+        ]
+      },
+      {
+        "code": "AI",
+        "title": "AI Engineer",
+        "text": "Applying machine learning and large language models to real problems: prompt design, retrieval pipelines and models that automate repetitive work.",
+        "chips": [
+          "Python",
+          "LLM APIs",
+          "Prompt engineering",
+          "RAG",
+          "scikit-learn",
+          "Automation"
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "group": "Data",
+        "items": [
+          "SQL",
+          "Microsoft Excel",
+          "Python",
+          "Power BI",
+          "Google Sheets",
+          "Data visualization"
+        ]
+      },
+      {
+        "group": "Network / NOC",
+        "items": [
+          "TCP/IP",
+          "Cisco IOS",
+          "MikroTik",
+          "VLAN & routing",
+          "Monitoring & alerting",
+          "Incident reports"
+        ]
+      },
+      {
+        "group": "Web Development",
+        "items": [
+          "HTML & CSS",
+          "JavaScript",
+          "PHP",
+          "MySQL",
+          "REST APIs",
+          "Git"
+        ]
+      },
+      {
+        "group": "AI Engineering",
+        "items": [
+          "Python",
+          "LLM APIs",
+          "Prompt engineering",
+          "RAG",
+          "scikit-learn",
+          "Jupyter"
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "label": "Email",
+        "value": "ridhanmuhammad25@gmail.com",
+        "url": ""
+      },
+      {
+        "label": "Instagram",
+        "value": "@ridhnfirdaus",
+        "url": "https://instagram.com/ridhnfirdaus"
+      },
+      {
+        "label": "GitHub",
+        "value": "github.com/ridhanmf",
+        "url": "https://github.com/ridhanmf"
+      },
+      {
+        "label": "Location",
+        "value": "Indonesia",
+        "url": ""
+      }
+    ],
+    "whatsapp": "6281234567890",
+    "homeBg": "",
+    "projects": [
+      {
+        "id": "yourmajor",
+        "title": "YourMajor Recommendation",
+        "tag": "Recommender system · Team project",
+        "desc": "Recommends university major categories from a student's 8 UTBK scores using K-Nearest Neighbors: it finds the students with the most similar score profile among 86,569 UTBK 2019 Saintek participants and ranks the majors they chose. Built with Muhammad Izzat and Nicholas Calvin.",
+        "stack": [
+          "Python",
+          "Pandas",
+          "scikit-learn (KNN)",
+          "PostgreSQL",
+          "Airflow",
+          "Streamlit"
+        ],
+        "demo": "",
+        "source": "https://github.com/ridhanmf/YourMajor_Recomendation_",
+        "thumb": "assets/images/projects/yourmajor.jpg"
+      },
+      {
+        "id": "sneaker",
+        "title": "Sneaker Analyst",
+        "tag": "Sales dashboard",
+        "desc": "Analyzes sneaker sales data to find sales trends and top-performing products, with a dashboard of sales by country, top products and brands, the 2022 monthly trend, payment methods, and average unit price by gender and category.",
+        "stack": [
+          "Python (Jupyter)",
+          "Pandas",
+          "Tableau",
+          "Data visualization"
+        ],
+        "demo": "",
+        "source": "https://github.com/ridhanmf/Sneakers_sales_analyst",
+        "thumb": "assets/images/projects/sneaker.jpg"
+      },
+      {
+        "id": "flight",
+        "title": "Flight Price Prediction",
+        "tag": "Machine learning · Regression",
+        "desc": "An end-to-end machine learning project that predicts flight ticket prices from flight features: it compares several regression models, tunes the best one and serves predictions through a Streamlit app.",
+        "stack": [
+          "Python",
+          "Jupyter",
+          "Regression models",
+          "Streamlit"
+        ],
+        "demo": "",
+        "source": "https://github.com/ridhanmf/Flight_Price_Ticket_Prediction",
+        "thumb": "assets/images/projects/flight.jpg"
+      },
+      {
+        "id": "carlogo",
+        "title": "Car Logo Prediction",
+        "tag": "Computer vision · Image classification",
+        "desc": "A deep learning computer-vision model that classifies car logos into five brands (Audi, Bentley, BMW, Mercedes and Toyota), trained with image preprocessing and data augmentation and deployed as a Streamlit app.",
+        "stack": [
+          "Python",
+          "Deep learning (CNN)",
+          "Data augmentation",
+          "Streamlit"
+        ],
+        "demo": "https://ridhan25-classificationcarlogo-uzkledvgvcyvqodq8vhzxd.streamlit.app/",
+        "source": "https://github.com/ridhanmf/Ridhan25-classification_car_logo",
+        "thumb": "assets/images/projects/carlogo.jpg"
+      }
+    ],
+    "photo": "assets/images/portrait.jpg",
+    "spHeroBg": ""
+  },
+  "cars": [],
+  "assets": {
+    "spHero": "assets/images/smartpark-hero.jpg"
+  }
+}

@@ -1,0 +1,8 @@
+@media print {
+  .topbar, .footer, .kos-nav, .toolbar, .demo-note, .btn, .pager { display: none !important; }
+  body { background: #fff; color: #000; }
+  .panel, .table-wrap { border-color: #ccc; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
