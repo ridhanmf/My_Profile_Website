@@ -50,7 +50,6 @@ Everything runs in the browser with no backend and no paid map APIs. SmartPark d
 │   ├── unit/                   # SmartPark + KostBills engine tests
 │   ├── e2e/site.spec.mjs       # Playwright: routes, admin, SmartPark flow, KostBills flow
 │   └── fixtures/admin-auth.json  # TEST-ONLY credential hash (user "e2e-admin")
-├── legacy/v1/                  # the previous version of this site, kept for reference
 ├── .env.example
 └── playwright.config.mjs
 ```
@@ -122,4 +121,3 @@ The output is a single static file, `dist/index.html`, and any static host works
 - Every WhatsApp button uses `profile.whatsapp` in `src/data/site.json` (currently `081224504181`). The local `08…` form is turned into `62…` for wa.me automatically. In the KostBills demo, reminders go to this number, not to the sample tenants.
 - The SmartPark sensor feed is a simulation. Readings arrive with a short delay to mimic real ultrasonic sensors, but no hardware is involved.
 - KostBills uses generated demo data. The names and phone numbers are fictional.
-- `legacy/v1/` holds the original single-page portfolio that used to live at the repository root.
