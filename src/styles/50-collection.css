@@ -1,0 +1,34 @@
+/* ---------- Collection ---------- */
+.car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; margin-top: 18px; }
+.car { overflow: hidden; display: grid; grid-template-rows: 1fr auto; text-align: left; padding: 0; transition: border-color .15s, transform .15s; }
+.car-open { display: grid; grid-template-rows: auto 1fr; border: 0; background: none; padding: 0; margin: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.car-buy { padding: 0 16px 16px; display: grid; }
+.btn.wa { background: var(--wa); border-color: var(--wa); color: var(--wa-ink); }
+.btn.wa:hover { filter: brightness(1.07); }
+.car:hover { border-color: var(--accent); transform: translateY(-2px); }
+.car-photo { aspect-ratio: 4 / 3; background: var(--surface-2); position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.car-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.car-photo .scale {
+  position: absolute; top: 10px; left: 10px; font-family: var(--display); font-weight: 800; font-size: 17px;
+  background: var(--ink); color: var(--bg); padding: 2px 8px; border-radius: 5px; letter-spacing: .02em;
+}
+.car-photo .count { position: absolute; bottom: 8px; right: 8px; font-size: 11px; background: rgba(10,14,20,.7); color: #fff; padding: 2px 7px; border-radius: 4px; }
+.car-photo .noimg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.car-body { padding: 14px 16px 16px; display: grid; gap: 6px; align-content: start; }
+.car-brand { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.car-name { font-weight: 700; font-size: 16.5px; line-height: 1.25; }
+.car-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.car-price { font-family: var(--display); font-weight: 800; font-size: 22px; }
+.empty {
+  border: 1.5px dashed var(--line); border-radius: var(--r); padding: clamp(28px, 5vw, 56px) 20px; text-align: center;
+  display: grid; gap: 10px; justify-items: center; color: var(--ink-2); margin-top: 18px;
+}
+.empty h3 { font-family: var(--display); font-size: 30px; font-weight: 800; text-transform: uppercase; color: var(--ink); }
+.empty p { max-width: 46ch; }
+.save-bar {
+  position: sticky; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 30; margin-top: 18px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; justify-content: space-between;
+  background: var(--ink); color: var(--bg); border-radius: var(--r); padding: 12px 14px 12px 18px; box-shadow: var(--shadow);
+}
+.save-bar .btn { border-color: transparent; }
+.save-bar .meter { font-size: 12px; opacity: .75; }

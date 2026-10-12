@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.tmp/
+*.zip
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+src/data/admin-auth.json
+
+# Test output
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Caches / OS / editor
+.cache/
+.npm/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
