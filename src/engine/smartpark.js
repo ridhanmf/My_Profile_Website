@@ -12,11 +12,13 @@ const SP = (() => {
   /* Special categories sit in the top-right corner of each basement (row A, slots 5–10). */
   const CAT_OF = { A5: "EV", A6: "EV", A7: "Ladies", A8: "Ladies", A9: "VIP", A10: "VIP" };
   const CATS = {
-    EV: { label: "EV", who: "kendaraan listrik", token: "--ev", glyph: "EV" },
-    Ladies: { label: "Wanita", who: "pengemudi wanita", token: "--ladies", glyph: "♀" },
-    VIP: { label: "VIP", who: "member VIP", token: "--vip", glyph: "VIP" },
+    EV: { label: ["EV", "EV"], who: ["kendaraan listrik", "electric vehicles"], token: "--ev", glyph: "EV" },
+    Ladies: { label: ["Wanita", "Ladies"], who: ["pengemudi wanita", "women drivers"], token: "--ladies", glyph: "♀" },
+    VIP: { label: ["VIP", "VIP"], who: ["member VIP", "VIP members"], token: "--vip", glyph: "VIP" },
   };
-  const kindLabel = (k) => (k === "Regular" ? "Reguler" : CATS[k] ? CATS[k].label : k);
+  /* Text is stored as [Indonesian, English] pairs so logs and messages can switch language later. */
+  const kindPair = (k) => (k === "Regular" ? ["Reguler", "Regular"] : CATS[k] ? CATS[k].label : [k, k]);
+  const kindLabel = (k) => pick(kindPair(k));
   const AISLE_Y = { 1: 210, 2: 450, 3: 690 };
   const SLOTS = [];
   ROWS.forEach((row) => {
@@ -193,7 +195,7 @@ const SP = (() => {
     if (!entranceClear(st)) return null;
     const c = newCar(kind); c.atGate = true; c.user = true;
     st.cars.push(c);
-    addLog(st, `Mobil #${c.id}${c.kind !== "Regular" ? ` (${kindLabel(c.kind)})` : ""} menunggu di gerbang masuk mal (B1)`);
+    addLog(st, [`Mobil #${c.id}${c.kind !== "Regular" ? ` (${kindPair(c.kind)[0]})` : ""} menunggu di gerbang masuk mal (B1)`, `Car #${c.id}${c.kind !== "Regular" ? ` (${kindPair(c.kind)[1]})` : ""} waiting at the mall entry gate (B1)`]);
     return c;
   }
   function openGate(w, car) {
@@ -203,7 +205,7 @@ const SP = (() => {
     const spot = spots.find(([x, y]) => !st.cars.some((o) => o !== car && Math.hypot(o.x - x, o.y - y) < 40)) || spots[0];
     car.mode = "auto"; car.target = null; car.goal = null; car.toIdle = true; car.wp = 0;
     car.path = [{ x: 120, y: LANE_E }, { x: spot[0] - 70, y: 722 }, { x: spot[0], y: spot[1] }];
-    addLog(st, `Mobil #${car.id} memindai QRIS · gerbang terbuka · peta parkir dibuka`);
+    addLog(st, [`Mobil #${car.id} memindai QRIS · gerbang terbuka · peta parkir dibuka`, `Car #${car.id} scanned QRIS · gate opened · parking map opened`]);
   }
   function freeSlots(st, car) {
     return SLOTS.filter((s) => (st.slotStatus[s.id] === "free" || (car && st.slotCar[s.id] === car.id)) && (!car || allowed(car, s)));
@@ -266,8 +268,8 @@ const SP = (() => {
     const c = newCar(r < 0.08 ? "EV" : r < 0.13 ? "Ladies" : r < 0.17 ? "VIP" : "Regular");
     st.cars.push(c); c.scannedAt = Date.now();
     const t = parkAnywhere(w, c, 1, null, null, { preferOther: Math.random() < 0.35 });
-    if (!t) { addLog(st, `Tidak ada slot kosong untuk mobil #${c.id}, kembali keluar`); leave(w, c, 1); return c; }
-    addLog(st, `Mobil #${c.id}${c.kind !== "Regular" ? ` (${kindLabel(c.kind)})` : ""} memindai QRIS · menuju ${code(t.level, t.slot.id)}`);
+    if (!t) { addLog(st, [`Tidak ada slot kosong untuk mobil #${c.id}, kembali keluar`, `No free slot for car #${c.id}, heading back out`]); leave(w, c, 1); return c; }
+    addLog(st, [`Mobil #${c.id}${c.kind !== "Regular" ? ` (${kindPair(c.kind)[0]})` : ""} memindai QRIS · menuju ${code(t.level, t.slot.id)}`, `Car #${c.id}${c.kind !== "Regular" ? ` (${kindPair(c.kind)[1]})` : ""} scanned QRIS · heading to ${code(t.level, t.slot.id)}`]);
     return c;
   }
   /* Ramp transfer: the car leaves this level's map and appears at the other level's arrival point. */
@@ -276,7 +278,7 @@ const SP = (() => {
     A.cars = A.cars.filter((c) => c !== car);
     Object.assign(car, ARRIVE[to], { v: 40, steer: 0, path: null, wp: 0, blocked: 0, ghost: 0, stuck: 0, transfer: 0 });
     B.cars.push(car);
-    addLog(A, `Mobil #${car.id} ${to === 2 ? "turun lewat ramp ke B2" : "naik lewat ramp ke B1"}`);
+    addLog(A, [`Mobil #${car.id} ${to === 2 ? "turun lewat ramp ke B2" : "naik lewat ramp ke B1"}`, `Car #${car.id} took the ramp ${to === 2 ? "down to B2" : "up to B1"}`]);
     const g = car.goal;
     if (g && g.exit) { const p = planToNode(B.G, car, to === 1 ? "EXIT" : "UP"); car.mode = "leaving"; car.path = p.pts; }
     else if (g && g.level === to && g.slot) {
@@ -292,11 +294,11 @@ const SP = (() => {
   function canPark(st, car, s) {
     const w = st.world;
     const occ = st.cars.find((o) => o !== car && (o.parked === s.id || (o.mode === "auto" && o.target === s.id)));
-    if (occ) return { ok: false, reason: occ.parked === s.id ? `Slot ${code(st, s.id)} sudah terisi.` : `Slot ${code(st, s.id)} sudah dipesan untuk mobil #${occ.id}.` };
+    if (occ) return { ok: false, reason: occ.parked === s.id ? [`Slot ${code(st, s.id)} sudah terisi.`, `Slot ${code(st, s.id)} is occupied.`] : [`Slot ${code(st, s.id)} sudah dipesan untuk mobil #${occ.id}.`, `Slot ${code(st, s.id)} is reserved for car #${occ.id}.`] };
     const other = w && w[st.level === 1 ? 2 : 1].cars.find((o) => o !== car && o.goal && o.goal.level === st.level && o.goal.slot === s.id);
-    if (other) return { ok: false, reason: `Slot ${code(st, s.id)} sudah dipesan untuk mobil #${other.id}.` };
-    if (st.slotStatus[s.id] === "occupied" && st.slotCar[s.id] !== car.id) return { ok: false, reason: `Slot ${code(st, s.id)} sudah terisi.` };
-    if (!allowed(car, s)) return { ok: false, reason: `Slot ${code(st, s.id)} khusus untuk ${CATS[s.cat].who}.` };
+    if (other) return { ok: false, reason: [`Slot ${code(st, s.id)} sudah dipesan untuk mobil #${other.id}.`, `Slot ${code(st, s.id)} is reserved for car #${other.id}.`] };
+    if (st.slotStatus[s.id] === "occupied" && st.slotCar[s.id] !== car.id) return { ok: false, reason: [`Slot ${code(st, s.id)} sudah terisi.`, `Slot ${code(st, s.id)} is occupied.`] };
+    if (!allowed(car, s)) return { ok: false, reason: [`Slot ${code(st, s.id)} khusus untuk ${CATS[s.cat].who[0]}.`, `Slot ${code(st, s.id)} is for ${CATS[s.cat].who[1]} only.`] };
     return { ok: true };
   }
   function beginDrag(st, car) {
@@ -318,9 +320,9 @@ const SP = (() => {
       const chk = canPark(st, car, s);
       if (!chk.ok) { restore(); return { ok: false, msg: chk.reason }; }
       car.mode = "auto"; car.target = s.id; car.path = null; car.settle = 0.35;
-      return { ok: true, msg: `Mobil #${car.id} dipindahkan ke ${code(st, s.id)}` };
+      return { ok: true, msg: [`Mobil #${car.id} dipindahkan ke ${code(st, s.id)}`, `Car #${car.id} dropped into ${code(st, s.id)}`] };
     }
-    if (overlaps(st, car)) { restore(); return { ok: false, msg: "Ada mobil lain yang menghalangi. Letakkan di tempat yang kosong." }; }
+    if (overlaps(st, car)) { restore(); return { ok: false, msg: ["Ada mobil lain yang menghalangi. Letakkan di tempat yang kosong.", "Another car is in the way. Drop it on a free spot."] }; }
     car.mode = "manual"; car.v = 0;
     return { ok: true, msg: null };
   }
@@ -376,12 +378,13 @@ const SP = (() => {
     if (c.stuck > 6 && c.mode === "auto" && c.target) { c.stuck = 0; const pl = planToSlot(st.G, c, SLOT[c.target]); if (pl) { c.path = pl.pts; c.wp = 0; } }
   }
 
-  const dur = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return s < 60 ? `${s} dtk` : `${Math.floor(s / 60)} mnt ${s % 60} dtk`; };
+  const durL = (ms, l) => { const s = Math.max(0, Math.round(ms / 1000)), en = l === "en"; return s < 60 ? `${s} ${en ? "s" : "dtk"}` : `${Math.floor(s / 60)} ${en ? "min" : "mnt"} ${s % 60} ${en ? "s" : "dtk"}`; };
+  const dur = (ms) => durL(ms, LANG.get());
   function stepLevel(st, dt) {
     const w = st.world;
     st.t += dt;
     st.cars.slice().forEach((c) => stepCar(st, c, dt));
-    st.cars.filter((c) => c.gone).forEach((c) => { c.exitedAt = Date.now(); addLog(st, `Mobil #${c.id} melewati ramp keluar dan meninggalkan mal${c.parkedAt ? ` · parkir ${dur((c.leftSlotAt || Date.now()) - c.parkedAt)}` : ""}`); if (w && w.onExit) w.onExit(c); });
+    st.cars.filter((c) => c.gone).forEach((c) => { c.exitedAt = Date.now(); const pd = c.parkedAt ? (c.leftSlotAt || Date.now()) - c.parkedAt : null; addLog(st, [`Mobil #${c.id} melewati ramp keluar dan meninggalkan mal${pd !== null ? ` · parkir ${durL(pd, "id")}` : ""}`, `Car #${c.id} passed the exit ramp and left the mall${pd !== null ? ` · parked ${durL(pd, "en")}` : ""}`]); if (w && w.onExit) w.onExit(c); });
     st.cars = st.cars.filter((c) => !c.gone);
     if (w) st.cars.filter((c) => c.transfer).forEach((c) => transfer(w, c, st.level, c.transfer));
     // physical occupancy (what the cars are actually doing), plus reservations made from the other level
@@ -399,7 +402,7 @@ const SP = (() => {
     // a car dropped into a reserved slot: re-route the car that was heading there
     st.cars.forEach((c) => {
       if (c.mode === "auto" && c.target && next[c.target] === "occupied" && owner[c.target] !== c.id && !c.settle) {
-        addLog(st, `${code(st, c.target)} sudah terisi, rute mobil #${c.id} dihitung ulang`);
+        addLog(st, [`${code(st, c.target)} sudah terisi, rute mobil #${c.id} dihitung ulang`, `${code(st, c.target)} was taken, re-routing car #${c.id}`]);
         c.target = null; if (!parkAnywhere(w, c, st.level, st.level, null, { level: st.level })) leave(w, c, st.level);
       }
     });
@@ -412,7 +415,7 @@ const SP = (() => {
       if (p2 && st.t >= p2.at) {
         sen.occ = p2.occ; sen.at = Date.now(); sen.dist = p2.occ ? 0.35 + Math.random() * 0.25 : 2.3 + Math.random() * 0.5;
         st.lastReading = sen.at; delete st.pending[s.id];
-        addLog(st, `Sensor ${code(st, s.id)} → ${sen.occ ? "terisi" : "kosong"} (${sen.dist.toFixed(2)} m)`, "sensor");
+        addLog(st, [`Sensor ${code(st, s.id)} → ${sen.occ ? "terisi" : "kosong"} (${sen.dist.toFixed(2)} m)`, `Sensor ${code(st, s.id)} → ${sen.occ ? "occupied" : "vacant"} (${sen.dist.toFixed(2)} m)`], "sensor");
       }
       st.display[s.id] = sen.occ ? "occupied" : next[s.id] === "reserved" ? "reserved" : "free";
     });
@@ -517,18 +520,18 @@ const SP = (() => {
     g.strokeStyle = alpha(C.paint, .14); g.lineWidth = 2;
     [[0, 90, 110, 170], [0, 250, 110, 650], [890, 90, 1000, 170], [890, 250, 1000, 650], [110, 90, 190, 170], [810, 90, 890, 170]].forEach(([x0, y0, x1, y1]) => g.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2));
     if (L === 1) { g.strokeRect(1, 701, 108, 27); g.strokeRect(891, 701, 108, 27); }
-    else { g.fillStyle = C.building; g.fillRect(0, 650, 110, 80); g.fillRect(890, 650, 110, 80); g.fillStyle = alpha(C.buildingInk, .7); g.font = `600 10px ${C.mono}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("DINDING", 55, 690); g.fillText("DINDING", 945, 690); }
+    else { g.fillStyle = C.building; g.fillRect(0, 650, 110, 80); g.fillRect(890, 650, 110, 80); g.fillStyle = alpha(C.buildingInk, .7); g.font = `600 10px ${C.mono}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(tt("DINDING", "WALL"), 55, 690); g.fillText(tt("DINDING", "WALL"), 945, 690); }
     // back wall & lift lobby
     g.fillStyle = C.building; g.fillRect(0, 0, W, 64);
     g.fillStyle = C.buildingInk; g.font = `800 28px ${C.display}`; g.textBaseline = "middle"; g.textAlign = "left";
     g.fillText(`BASEMENT ${L}`, 24, 33);
     const tw = g.measureText(`BASEMENT ${L}`).width;
-    g.fillStyle = alpha(C.buildingInk, .65); g.font = `500 11px ${C.mono}`; g.fillText("GRAND AVENUE MALL · PARKIR PINTAR (SIMULASI IoT)", 24 + tw + 16, 34);
-    g.textAlign = "right"; g.fillText("LIFT ▲ KE MAL", W - 24, 34);
+    g.fillStyle = alpha(C.buildingInk, .65); g.font = `500 11px ${C.mono}`; g.fillText(tt("GRAND AVENUE MALL · PARKIR PINTAR (SIMULASI IoT)", "GRAND AVENUE MALL · SMART PARKING (SIMULATED IoT)"), 24 + tw + 16, 34);
+    g.textAlign = "right"; g.fillText(tt("LIFT ▲ KE MAL", "LIFT ▲ TO MALL"), W - 24, 34);
     g.fillStyle = C.asphalt2; g.fillRect(0, 64, W, 26);
     [520, 680].forEach((x) => {
       g.fillStyle = alpha(C.accent, .25); g.fillRect(x - 26, 58, 52, 6);
-      g.fillStyle = alpha(C.buildingInk, .55); g.font = `600 9.5px ${C.mono}`; g.textAlign = "center"; g.fillText("LOBI LIFT", x, 77);
+      g.fillStyle = alpha(C.buildingInk, .55); g.font = `600 9.5px ${C.mono}`; g.textAlign = "center"; g.fillText(tt("LOBI LIFT", "LIFT LOBBY"), x, 77);
     });
     // pillars
     [[200, 130], [800, 130], [200, 330], [800, 330], [200, 570], [800, 570], [55, 450], [945, 450]].forEach(([x, y]) => {
@@ -537,8 +540,8 @@ const SP = (() => {
       g.fillStyle = alpha(C.ok, .55); g.fillRect(x - 8, y - 1, 16, 3);
     });
     // ramps
-    if (L === 1) { drawRamp(g, C, RAMP_R, 0, "RAMP ▼\nKE B2"); drawRamp(g, C, RAMP_L, 0, "DARI B2\n▲ RAMP"); }
-    else { drawRamp(g, C, RAMP_R, Math.PI, "DARI B1\nRAMP ▼"); drawRamp(g, C, RAMP_L, Math.PI, "RAMP ▲\nNAIK KE B1"); }
+    if (L === 1) { drawRamp(g, C, RAMP_R, 0, tt("RAMP ▼\nKE B2", "RAMP ▼\nTO B2")); drawRamp(g, C, RAMP_L, 0, tt("DARI B2\n▲ RAMP", "FROM B2\n▲ RAMP")); }
+    else { drawRamp(g, C, RAMP_R, Math.PI, tt("DARI B1\nRAMP ▼", "FROM B1\nRAMP ▼")); drawRamp(g, C, RAMP_L, Math.PI, tt("RAMP ▲\nNAIK KE B1", "RAMP ▲\nUP TO B1")); }
     // slots
     SLOTS.forEach((s) => {
       const stt = st.display[s.id] || "free";
@@ -581,11 +584,11 @@ const SP = (() => {
     [320, 640].forEach((x) => { arrow(g, x, LANE_E, 0, ac); arrow(g, x - 60, LANE_W, Math.PI, ac); });
     [330, 590].forEach((y) => { arrow(g, 150, y, -Math.PI / 2, ac); arrow(g, 850, y, Math.PI / 2, ac); });
     g.fillStyle = alpha(C.paint, .4); g.font = `700 9px ${C.mono}`; g.textAlign = "left";
-    g.fillText("LAJUR KIRI", 470, 668);
+    g.fillText(tt("LAJUR KIRI", "KEEP LEFT"), 470, 668);
     // waiting bay (B1) for visitors deciding where to park
     if (L === 1) {
       g.strokeStyle = alpha(C.paint, .35); g.lineWidth = 1.5; g.setLineDash([6, 5]); g.strokeRect(BAY_WAIT[0] + 1, BAY_WAIT[1] + 1, BAY_WAIT[2] - BAY_WAIT[0] - 2, BAY_WAIT[3] - BAY_WAIT[1] - 2); g.setLineDash([]);
-      g.fillStyle = alpha(C.paint, .45); g.font = `700 9px ${C.mono}`; g.textAlign = "right"; g.fillText("AREA TUNGGU · BUKA PETA", BAY_WAIT[2] - 8, 750);
+      g.fillStyle = alpha(C.paint, .45); g.font = `700 9px ${C.mono}`; g.textAlign = "right"; g.fillText(tt("AREA TUNGGU · BUKA PETA", "WAITING BAY · OPEN MAP"), BAY_WAIT[2] - 8, 750);
       // gates across the entry and exit lanes (left lane)
       const gate = (x, label, open, labelX) => {
         g.fillStyle = C.pillar; g.fillRect(x - 6, 642, 12, 12);
@@ -597,8 +600,8 @@ const SP = (() => {
         g.fillStyle = C.buildingInk; g.fillText(label, labelX, 743);
       };
       const waiting = st.cars.some((c) => c.atGate);
-      gate(56, "MASUK MAL ▸", st.cars.some((c) => !c.atGate && c.mode !== "parked" && Math.abs(c.x - 56) < 60 && Math.abs(c.y - LANE_E) < 30), 60);
-      gate(944, "RAMP KELUAR ▸", st.cars.some((c) => Math.abs(c.x - 944) < 60 && Math.abs(c.y - LANE_E) < 30), 940);
+      gate(56, tt("MASUK MAL ▸", "MALL ENTRY ▸"), st.cars.some((c) => !c.atGate && c.mode !== "parked" && Math.abs(c.x - 56) < 60 && Math.abs(c.y - LANE_E) < 30), 60);
+      gate(944, tt("RAMP KELUAR ▸", "EXIT RAMP ▸"), st.cars.some((c) => Math.abs(c.x - 944) < 60 && Math.abs(c.y - LANE_E) < 30), 940);
       arrow(g, 30, LANE_E, 0, ac, .8); arrow(g, 975, LANE_E, 0, ac, .8);
       g.fillStyle = waiting ? C.accent : C.pillar; rrect(g, 66, 618, 38, 22, 5); g.fill();
       g.fillStyle = waiting ? C.accentInk : C.buildingInk; g.font = `700 9.5px ${C.mono}`; g.textAlign = "center"; g.fillText("QRIS", 85, 629);
@@ -619,6 +622,6 @@ const SP = (() => {
       surface2: v("--surface-2"), muted: v("--muted"), ink: v("--ink"), ok: v("--ok"), bad: v("--bad"), amber: v("--amber"), accent: v("--accent"), accentInk: v("--accent-ink"),
       ev: v("--ev"), ladies: v("--ladies"), vip: v("--vip"), display: v("--display"), mono: v("--mono") };
   }
-  return { kindLabel, W, H, SLOTS, SLOT, ROWS, CATS, KINDS, FEED, GEO, createState, createWorld, seed, step, draw, colors, findCar, arriveAtGate, openGate, spawnAuto, parkAnywhere, recommendWorld, leave, canPark, beginDrag, dragTo, endDrag, slotAt, allowed, addLog, code, dur };
+  return { kindLabel, kindPair, W, H, SLOTS, SLOT, ROWS, CATS, KINDS, FEED, GEO, createState, createWorld, seed, step, draw, colors, findCar, arriveAtGate, openGate, spawnAuto, parkAnywhere, recommendWorld, leave, canPark, beginDrag, dragTo, endDrag, slotAt, allowed, addLog, code, dur };
 })();
 

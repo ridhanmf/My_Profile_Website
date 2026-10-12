@@ -8,7 +8,7 @@ const KL_TEXT = {
     trust: ["Demo gratis tanpa daftar", "Data contoh 1.000 kamar", "Berjalan di browser"],
     mockUrl: "kostbills · dasbor", mockOcc: "Hunian", mockColl: "Terkumpul bulan ini", mockLate: "Terlambat", mockChart: "Ditagihkan vs terkumpul", mockRooms: "Blok A · 100 kamar",
     toastWa: "Pengingat terkirim", toastWaSub: "via WhatsApp", toastPaid: "Lunas",
-    stats: [["kamar dikelola", 1000, ""], ["blok × 4 lantai", 10, ""], ["tarif flat, semua termasuk", 850, " rb"], ["pengingat sebelum jatuh tempo", 7, " hari"], ["status pembayaran", 5, ""]],
+    classRooms: (t) => `kamar ${t}`, stats: [["pengingat sebelum jatuh tempo", 7, " hari"], ["status pembayaran", 5, ""]],
     statsNote: "Angka ilustratif dari properti demo.",
     pbEyebrow: "Kenapa KostBills", pbTitle: "Dari catatan manual ke sistem yang rapi",
     before: "Tanpa KostBills", after: "Dengan KostBills",
@@ -16,7 +16,7 @@ const KL_TEXT = {
     afterList: ["Tagihan seluruh kamar terisi dibuat dengan satu klik", "Status Segera jatuh tempo & Terlambat muncul otomatis", "Laporan per blok dan lantai siap diunduh (PDF/CSV)", "Denah 1.000 kamar dengan warna status terkini"],
     fEyebrow: "Fitur utama", fTitle: "Semua yang dibutuhkan pengelola kos", fLead: "Pilih fitur untuk melihat cara kerjanya.",
     features: {
-      rooms: ["Manajemen kamar & penghuni", "Denah per blok dan lantai, data penghuni, check-in dan check-out dalam satu tempat.", ["Denah 10 blok × 4 lantai × 25 kamar", "Status Terisi, Kosong, Dipesan, Perbaikan", "Tanggal masuk otomatis jadi tanggal jatuh tempo"]],
+      rooms: ["Manajemen kamar & penghuni", "Denah per blok dan lantai, data penghuni, check-in dan check-out dalam satu tempat.", ["Denah 10 blok × 4 lantai × 25 kamar", "Kelas kamar Regular, Premium, dan Expensive", "Status Terisi, Kosong, Dipesan, Perbaikan"]],
       bills: ["Tagihan otomatis", "Tagihan bulanan untuk setiap kamar terisi dibuat sekaligus, dengan tarif flat yang jelas.", ["Rp850.000 per bulan, tanpa biaya tambahan", "Listrik memakai token prabayar, tidak ditagihkan", "Invoice dan kuitansi PDF siap unduh"]],
       status: ["Status pembayaran", "Lima status yang dihitung otomatis dari jatuh tempo dan jumlah yang sudah dibayar.", ["Lunas, Dibayar sebagian, Belum bayar", "Segera jatuh tempo (≤ 7 hari) dan Terlambat", "Filter per bulan, tahun, blok, dan status"]],
       reminder: ["Pengingat jatuh tempo", "Tagihan yang mendekati atau melewati jatuh tempo langsung ditandai untuk ditindaklanjuti.", ["Daftar \"Perlu ditindaklanjuti\" di ringkasan", "Hitung mundur hari menuju jatuh tempo", "Jumlah tagihan terlambat di menu samping"]],
@@ -35,9 +35,8 @@ const KL_TEXT = {
     flow: [["Daftarkan kamar & penghuni", "Isi data penghuni saat check-in. Tanggal masuk otomatis menjadi tanggal jatuh tempo bulanan."], ["Tagihan dibuat otomatis", "Satu klik membuat tagihan Rp850.000 untuk semua kamar yang terisi bulan itu."], ["Pantau & ingatkan", "Status diperbarui otomatis. Kirim pengingat WhatsApp untuk tagihan yang segera jatuh tempo atau terlambat."], ["Catat bayar & unduh laporan", "Catat pembayaran, unduh kuitansi PDF, dan ekspor laporan pendapatan untuk pembukuan."]],
     calcEyebrow: "Simulasi pendapatan", calcTitle: "Berapa potensi pendapatan kos Anda?", calcRooms: "Kamar terisi", calcRate: "Tingkat penagihan", calcMonth: "Per bulan", calcYear: "Per tahun", calcNote: "Dihitung dari tarif flat Rp850.000 per kamar per bulan. Hanya ilustrasi.",
     faqTitle: "Pertanyaan umum",
-    faq: [["Apakah listrik ikut ditagihkan?", "Tidak. Setiap kamar memakai token listrik prabayar milik penghuni, jadi tagihan bulanan hanya berisi sewa Rp850.000 yang sudah termasuk kebersihan, keamanan, dan perawatan."], ["Bagaimana tanggal jatuh tempo ditentukan?", "Jatuh tempo mengikuti tanggal penghuni pertama kali masuk. Penghuni yang masuk tanggal 15 akan jatuh tempo setiap tanggal 15."], ["Apakah demo ini memakai data sungguhan?", "Tidak. Demo berisi 1.000 kamar dengan nama dan nomor contoh. Perubahan yang Anda buat hanya tersimpan di browser Anda dan bisa diatur ulang kapan saja."], ["Bagaimana pengingat WhatsApp bekerja?", "KostBills menyiapkan pesan pengingat lengkap dan membukanya di WhatsApp. Di demo ini, pesan diarahkan ke nomor pengelola, bukan ke nomor penghuni contoh."]],
+    faq: [["Bagaimana tanggal jatuh tempo ditentukan?", "Jatuh tempo mengikuti tanggal penghuni pertama kali masuk. Penghuni yang masuk tanggal 15 akan jatuh tempo setiap tanggal 15."], ["Apakah demo ini memakai data sungguhan?", "Tidak. Demo berisi 1.000 kamar dengan nama dan nomor contoh. Perubahan yang Anda buat hanya tersimpan di browser Anda dan bisa diatur ulang kapan saja."], ["Bagaimana pengingat WhatsApp bekerja?", "KostBills menyiapkan pesan pengingat lengkap dan membukanya di WhatsApp. Di demo ini, pesan diarahkan ke nomor pengelola, bukan ke nomor penghuni contoh."]],
     endTitle: "Lihat sendiri bagaimana 1.000 kamar dikelola.", endLead: "Buka demo interaktif dengan data lengkap: kamar, penghuni, tagihan, transaksi, dan laporan.",
-    langLabel: "Bahasa",
     waIntro: "Halo, saya tertarik dengan KostBills, sistem manajemen tagihan kos. Boleh minta informasi lebih lanjut?",
   },
   en: {
@@ -48,7 +47,7 @@ const KL_TEXT = {
     trust: ["Free demo, no sign-up", "Sample data for 1,000 rooms", "Runs in the browser"],
     mockUrl: "kostbills · dashboard", mockOcc: "Occupancy", mockColl: "Collected this month", mockLate: "Overdue", mockChart: "Billed vs collected", mockRooms: "Block A · 100 rooms",
     toastWa: "Reminder sent", toastWaSub: "via WhatsApp", toastPaid: "Paid",
-    stats: [["rooms managed", 1000, ""], ["blocks × 4 floors", 10, ""], ["flat rent, all-in", 850, "k"], ["reminder before the due date", 7, " days"], ["payment statuses", 5, ""]],
+    classRooms: (t) => `${t} rooms`, stats: [["reminder before the due date", 7, " days"], ["payment statuses", 5, ""]],
     statsNote: "Illustrative figures from the demo property.",
     pbEyebrow: "Why KostBills", pbTitle: "From manual notes to a tidy system",
     before: "Without KostBills", after: "With KostBills",
@@ -56,7 +55,7 @@ const KL_TEXT = {
     afterList: ["Bills for every occupied room in one click", "Due Soon and Overdue flags appear automatically", "Reports by block and floor, ready as PDF or CSV", "A 1,000-room floor plan with live status colours"],
     fEyebrow: "Key features", fTitle: "Everything a boarding-house manager needs", fLead: "Pick a feature to see how it works.",
     features: {
-      rooms: ["Rooms & tenants", "Floor plans per block and floor, tenant records, check-in and check-out in one place.", ["10 blocks × 4 floors × 25 rooms", "Occupied, Vacant, Reserved, Maintenance", "Move-in date becomes the monthly due date"]],
+      rooms: ["Rooms & tenants", "Floor plans per block and floor, tenant records, check-in and check-out in one place.", ["10 blocks × 4 floors × 25 rooms", "Regular, Premium and Expensive room classes", "Occupied, Vacant, Reserved, Maintenance"]],
       bills: ["Automatic billing", "Monthly bills for every occupied room are created at once, with one clear flat rate.", ["Rp850,000 a month, no extra fees", "Electricity is a prepaid token, never billed", "PDF invoices and receipts"]],
       status: ["Payment status", "Five statuses worked out automatically from the due date and the amount paid.", ["Paid, Partially paid, Unpaid", "Due soon (≤ 7 days) and Overdue", "Filter by month, year, block and status"]],
       reminder: ["Due-date reminders", "Bills that are close to or past their due date are flagged for follow-up straight away.", ["\"Needs follow-up\" list on the overview", "Countdown in days to the due date", "Overdue count in the side menu"]],
@@ -75,9 +74,8 @@ const KL_TEXT = {
     flow: [["Register rooms & tenants", "Add the tenant at check-in. The move-in date becomes their monthly due date."], ["Bills are generated", "One click creates a Rp850,000 bill for every occupied room that month."], ["Track & remind", "Statuses update on their own. Send WhatsApp reminders for bills that are due soon or overdue."], ["Record payments & report", "Record payments, download PDF receipts and export revenue reports for bookkeeping."]],
     calcEyebrow: "Revenue simulator", calcTitle: "What could your boarding house earn?", calcRooms: "Occupied rooms", calcRate: "Collection rate", calcMonth: "Per month", calcYear: "Per year", calcNote: "Based on the flat Rp850,000 per room per month. Illustration only.",
     faqTitle: "Frequently asked questions",
-    faq: [["Is electricity billed?", "No. Every room uses the tenant's own prepaid electricity token, so the monthly bill is just the Rp850,000 rent, which already covers cleaning, security and maintenance."], ["How is the due date set?", "It follows the tenant's move-in date. Someone who moved in on the 15th is due on the 15th of every month."], ["Does the demo use real data?", "No. The demo has 1,000 rooms with sample names and numbers. Your changes stay in your own browser and can be reset at any time."], ["How do WhatsApp reminders work?", "KostBills prepares a complete reminder and opens it in WhatsApp. In this demo the message goes to the manager's number, not to the sample tenants."]],
+    faq: [["How is the due date set?", "It follows the tenant's move-in date. Someone who moved in on the 15th is due on the 15th of every month."], ["Does the demo use real data?", "No. The demo has 1,000 rooms with sample names and numbers. Your changes stay in your own browser and can be reset at any time."], ["How do WhatsApp reminders work?", "KostBills prepares a complete reminder and opens it in WhatsApp. In this demo the message goes to the manager's number, not to the sample tenants."]],
     endTitle: "See how 1,000 rooms are managed.", endLead: "Open the interactive demo with full data: rooms, tenants, bills, transactions and reports.",
-    langLabel: "Language",
     waIntro: "Hi, I'm interested in KostBills, the boarding-house billing system. Could you tell me more?",
   },
 };
@@ -94,7 +92,8 @@ const klSvg = (d, w = 20) => `<svg viewBox="0 0 24 24" width="${w}" height="${w}
 
 PAGES.kos = {
   feature: "rooms",
-  lang() { const l = store.get("kos-lang", "id"); return KL_TEXT[l] ? l : "id"; },
+  lang() { return LANG.get(); },
+  onLang() { const y = window.scrollY; this.render(); window.scrollTo(0, y); },
   mount(view) {
     KOS.load();
     this.view = view;
@@ -125,7 +124,7 @@ PAGES.kos = {
       <div class="wrap kl-hero-in">
         <div class="kl-copy">
           <div class="kl-top"><div class="eyebrow">${T.eyebrow}</div>
-            <div class="seg kl-lang" role="group" aria-label="${T.langLabel}"><button type="button" data-lang="id" aria-pressed="${L === "id"}">ID</button><button type="button" data-lang="en" aria-pressed="${L === "en"}">EN</button></div></div>
+            ${langSwitch("on-dark")}</div>
           <h1 class="kl-title"><span>${T.title[0]}</span> <span class="kl-hl">${T.title[1]}</span></h1>
           <p class="kl-lead">${T.lead}</p>
           <div class="kl-cta">
@@ -157,7 +156,7 @@ PAGES.kos = {
     </section>
 
     <div class="wrap"><section class="kl-stats reveal" aria-label="${T.statsNote}">
-      ${T.stats.map(([label, n, suf]) => `<div class="kl-stat"><b data-count="${n}"${/rb|k/.test(suf) ? ` data-prefix="Rp "` : ""} data-suffix="${suf}">0</b><span>${label}</span></div>`).join("")}
+      ${typeCount(KOS.D.rooms).map(([t, n]) => [T.classRooms(t), n, ""]).concat(T.stats).map(([label, n, suf]) => `<div class="kl-stat"><b data-count="${n}" data-suffix="${suf}">0</b><span>${label}</span></div>`).join("")}
       <p class="kl-note">${T.statsNote}</p>
     </section></div>
 
@@ -216,13 +215,13 @@ PAGES.kos = {
     if (k === "rooms") {
       demo = `<div class="kl-mini"><div class="kl-legend">${["occ", "due", "vac", "mnt"].map((c, i) => `<span><i class="${c}"></i>${P.roomsLegend[i]}</span>`).join("")}</div>
         <div class="kl-grid big">${N.blockA.map((c) => `<i class="${c}"></i>`).join("")}</div>
-        <dl class="kl-tenant"><dt>${P.tenant}</dt><dd>${esc(sampleT.name || "—")} · ${N.sample.roomId}</dd><dt>${P.since}</dt><dd>${tgl(sampleT.checkIn || KOS.today())}</dd><dt>${P.due}</dt><dd>${P.dueDay} ${sampleT.dueDay || 1}</dd></dl></div>`;
+        <dl class="kl-tenant"><dt>${P.tenant}</dt><dd>${esc(sampleT.name || "—")} · ${N.sample.roomId} (${(KOS.IX.room[N.sample.roomId] || {}).type || "Regular"})</dd><dt>${P.since}</dt><dd>${tgl(sampleT.checkIn || KOS.today())}</dd><dt>${P.due}</dt><dd>${P.dueDay} ${sampleT.dueDay || 1}</dd></dl></div>`;
     } else if (k === "bills") {
       const list = KOS.D.bills.filter((b) => b.month === KOS.ym(new Date())).slice(0, 4);
       demo = `<div class="kl-mini"><button class="btn primary sm" type="button" data-gen>${klSvg(KL_ICON.bills, 16)} ${P.genBtn}</button><span class="kl-gen" id="kl-gen" hidden></span>
         <table class="kl-tbl"><thead><tr><th>${P.inv}</th><th>${P.tenant}</th><th class="r">${P.amount}</th></tr></thead><tbody>${list.map((b, i) => `<tr style="--d:${i * 90}ms"><td class="mono">${b.id}</td><td>${esc((KOS.IX.tenant[b.tenantId] || {}).name || "")}</td><td class="r num">${idr(b.rent)}</td></tr>`).join("")}</tbody></table></div>`;
     } else if (k === "status") {
-      demo = `<div class="kl-mini kl-status">${KOS.STATUSES.map((s) => `<div><span class="pill ${KOS.STATUS_PILL[s]}">${this.lang() === "id" ? KOS.STATUS_LABEL[s] : { Paid: "Paid", Partial: "Partially paid", Unpaid: "Unpaid", "Due Soon": "Due soon", Overdue: "Overdue" }[s]}</span><small>${P.statusRule[s]}</small><b class="num">${num(N.st[s])}</b></div>`).join("")}</div>`;
+      demo = `<div class="kl-mini kl-status">${KOS.STATUSES.map((s) => `<div><span class="pill ${KOS.STATUS_PILL[s]}">${KOS.statusLabel(s)}</span><small>${P.statusRule[s]}</small><b class="num">${num(N.st[s])}</b></div>`).join("")}</div>`;
     } else if (k === "reminder") {
       demo = `<div class="kl-mini"><ol class="kl-timeline">${P.timeline.map(([d, t], i) => `<li class="${i === 3 ? "bad" : i === 2 ? "now" : ""}" style="--d:${i * 120}ms"><b>${d}</b><span>${t}</span></li>`).join("")}</ol></div>`;
     } else if (k === "wa") {
@@ -280,13 +279,6 @@ PAGES.kos = {
   },
   onClick(e) {
     let x;
-    if ((x = e.target.closest("[data-lang]"))) {
-      if (x.dataset.lang === this.lang()) return;
-      store.set("kos-lang", x.dataset.lang);
-      const y = window.scrollY; this.render(); window.scrollTo(0, y);
-      $(`.kl-lang [data-lang="${x.dataset.lang}"]`, this.view).focus({ preventScroll: true });
-      return;
-    }
     if ((x = e.target.closest("[data-feature]"))) return this.setFeature(x.dataset.feature);
     if ((x = e.target.closest("[data-scroll]"))) { const t = document.getElementById(x.dataset.scroll); if (t) t.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); return; }
     if (e.target.closest("[data-gen]")) {

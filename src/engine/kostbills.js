@@ -4,15 +4,25 @@ const KOS = (() => {
   /* Billing rule: one flat rent that already includes cleaning, security and maintenance.
      Electricity is a prepaid token bought by the tenant, so it never appears on a bill. */
   const RENT = 850000;
-  const INCLUDED = "Sudah termasuk kebersihan, keamanan, dan perawatan. Listrik memakai token prabayar milik penghuni dan tidak ditagihkan.";
+  const INCLUDED = ["Sudah termasuk kebersihan, keamanan, dan perawatan. Listrik memakai token prabayar milik penghuni dan tidak ditagihkan.",
+    "Includes cleaning, security and maintenance. Electricity uses the tenant's own prepaid token and is not billed."];
   const DUE_SOON_DAYS = 7;
   const METHODS = ["Transfer BCA", "QRIS", "Transfer Mandiri", "Transfer BRI", "Cash"];
   const STATUSES = ["Paid", "Partial", "Unpaid", "Due Soon", "Overdue"];
-  const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  /* Internal keys stay in English (stored data, filters); these are the Indonesian display labels. */
-  const STATUS_LABEL = { Paid: "Lunas", Partial: "Dibayar sebagian", Unpaid: "Belum bayar", "Due Soon": "Segera jatuh tempo", Overdue: "Terlambat" };
-  const ROOM_LABEL = { Occupied: "Terisi", Vacant: "Kosong", Maintenance: "Perbaikan", Reserved: "Dipesan" };
-  const methodLabel = (m) => (m === "Cash" ? "Tunai" : m);
+  const MONTHS_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthNames = () => (LANG.get() === "en" ? MONTHS_EN : MONTHS_ID);
+  /* Internal keys stay in English (stored data, filters); display labels follow the chosen language. */
+  const STATUS_LABEL = { Paid: ["Lunas", "Paid"], Partial: ["Dibayar sebagian", "Partially paid"], Unpaid: ["Belum bayar", "Unpaid"], "Due Soon": ["Segera jatuh tempo", "Due soon"], Overdue: ["Terlambat", "Overdue"] };
+  const ROOM_LABEL = { Occupied: ["Terisi", "Occupied"], Vacant: ["Kosong", "Vacant"], Maintenance: ["Perbaikan", "Maintenance"], Reserved: ["Dipesan", "Reserved"] };
+  const statusLabel = (s) => pick(STATUS_LABEL[s]) || s;
+  const roomLabel = (s) => pick(ROOM_LABEL[s]) || s;
+  const methodLabel = (m) => (m === "Cash" ? tt("Tunai", "Cash") : m);
+  const included = () => pick(INCLUDED);
+  /* Room classes. Per block: 10 Premium (floor 3, rooms 16–25) and 5 Expensive (floor 4, rooms 21–25);
+     every other room is Regular. Rent stays the same flat rate for every class. */
+  const TYPES = ["Regular", "Premium", "Expensive"];
+  const typeOf = (floor, no) => (floor === 4 && no >= 21 ? "Expensive" : floor === 3 && no >= 16 ? "Premium" : "Regular");
   const FIRST = ["Andi", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hendra", "Indah", "Joko", "Kartika", "Lestari", "Made", "Nanda", "Oktavia", "Putri", "Rizky", "Sari", "Taufik", "Utami", "Vina", "Wahyu", "Yogi", "Zahra", "Agus", "Bayu", "Dimas", "Fitri", "Galih", "Hana", "Irfan", "Jihan", "Kevin", "Laras", "Mega", "Nur", "Oki", "Pandu", "Rani", "Satria", "Tiara", "Wulan", "Yusuf", "Aulia", "Bima", "Cahya", "Dinda", "Farhan", "Ilham", "Nabila"];
   const LAST = ["Pratama", "Saputra", "Wijaya", "Hidayat", "Santoso", "Kusuma", "Nugroho", "Lestari", "Siregar", "Harahap", "Setiawan", "Rahmawati", "Putra", "Wibowo", "Utomo", "Simanjuntak", "Gunawan", "Fauzi", "Maharani", "Permana", "Ramadhan", "Susanto", "Halim", "Purnomo", "Anggraini", "Nasution", "Firmansyah", "Sihombing"];
   const JOBS = ["Mahasiswa", "Mahasiswa", "Mahasiswa", "Karyawan swasta", "Karyawan swasta", "Perawat", "Guru", "Programmer", "Staf bank", "Wiraswasta", "Desainer", "Admin kantor"];
@@ -20,7 +30,7 @@ const KOS = (() => {
   const ym = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
   const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d || 1); };
-  const monthLabel = (m, short) => { const [y, mo] = m.split("-").map(Number); return short ? MONTHS[mo - 1].slice(0, 3) : `${MONTHS[mo - 1]} ${y}`; };
+  const monthLabel = (m, short) => { const [y, mo] = m.split("-").map(Number); const n = monthNames()[mo - 1]; return short ? n.slice(0, 3) : `${n} ${y}`; };
   const addMonths = (m, k) => { const [y, mo] = m.split("-").map(Number); return ym(new Date(y, mo - 1 + k, 1)); };
   const today = () => ymd(new Date());
   const daysUntil = (dateStr) => Math.round((parse(dateStr) - parse(today())) / 86400000);
@@ -40,7 +50,7 @@ const KOS = (() => {
       for (let f = 1; f <= 4; f++) for (let n = 1; n <= 25; n++) {
         const r = R();
         const status = r < 0.015 ? "Maintenance" : r < 0.025 ? "Reserved" : r < 0.12 ? "Vacant" : "Occupied";
-        const room = { id: `${b}-${f}${pad(n)}`, block: b, floor: f, no: n, rent: RENT, status, tenantId: null };
+        const room = { id: `${b}-${f}${pad(n)}`, block: b, floor: f, no: n, type: typeOf(f, n), rent: RENT, status, tenantId: null };
         if (status === "Occupied") {
           let ci = new Date(between(2023, 2026), Math.floor(R() * 12), between(1, 28));
           if (ci > now) ci = new Date(2025, ci.getMonth(), ci.getDate());
@@ -86,6 +96,7 @@ const KOS = (() => {
   function load() {
     const saved = store.get(KEY, null);
     D = saved && saved.v === 3 && saved.rooms && saved.rooms.length === 1000 ? saved : generate();
+    D.rooms.forEach((r) => { if (!r.type) r.type = typeOf(r.floor, r.no); }); // demo data saved before room classes existed
     reindex();
     return D;
   }
@@ -153,7 +164,7 @@ const KOS = (() => {
   }
   function summary(m) { return { m, ...sumBills(D.bills.filter((b) => b.month === m)) }; }
   function collectedInYear(y) { return D.trx.filter((t) => t.date.slice(0, 4) === y).reduce((s, t) => s + t.amount, 0); }
-  return { STATUS_LABEL, ROOM_LABEL, methodLabel, BLOCKS, RENT, INCLUDED, METHODS, STATUSES, MONTHS, DUE_SOON_DAYS, load, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
+  return { statusLabel, roomLabel, methodLabel, included, TYPES, typeOf, get MONTHS() { return monthNames(); }, BLOCKS, RENT, METHODS, STATUSES, DUE_SOON_DAYS, load, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
 })();
 
 function kosSummary() {

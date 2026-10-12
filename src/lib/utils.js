@@ -24,6 +24,26 @@ const sess = {
   del(k) { try { sessionStorage.removeItem(k); } catch (e) {} },
 };
 
+/* ---------- Language for the project pages (SmartPark, KostBills) ----------
+   One shared choice ("id" or "en"), remembered in this browser. Pages re-render on "langchange". */
+const LANG = {
+  cur: null,
+  get() {
+    if (!LANG.cur) { const l = store.get("proj-lang", null) || store.get("kos-lang", "id"); LANG.cur = l === "en" ? "en" : "id"; }
+    return LANG.cur;
+  },
+  set(l) {
+    l = l === "en" ? "en" : "id";
+    if (l === LANG.get()) return;
+    LANG.cur = l; store.set("proj-lang", l);
+    if (typeof document !== "undefined") document.dispatchEvent(new CustomEvent("langchange", { detail: l }));
+  },
+};
+/* tt("Indonesian", "English") picks the current language; pick([id, en]) does the same for stored pairs. */
+const tt = (id, en) => (LANG.get() === "en" ? en : id);
+const pick = (v) => (Array.isArray(v) ? v[LANG.get() === "en" ? 1 : 0] : v);
+const locale = () => (LANG.get() === "en" ? "en-US" : "id-ID");
+
 const ICON = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',

@@ -3,8 +3,8 @@ const PAGES = {};
 /* Top-level links, and the projects grouped under the "Project" menu. */
 const NAV = [["home", "Home"], ["collection", "MyCollection"]];
 const PROJECT_NAV = [
-  ["smartpark", "SmartPark", "Navigasi parkir mal · simulasi IoT", '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>'],
-  ["kos", "KostBills", "Manajemen tagihan kos 1.000 kamar", '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/>'],
+  ["smartpark", "SmartPark", ["Navigasi parkir mal · simulasi IoT", "Mall parking navigation · IoT simulation"], '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>'],
+  ["kos", "KostBills", ["Manajemen tagihan kos 1.000 kamar", "Billing for a 1,000-room boarding house"], '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/>'],
 ];
 const ROUTE_TITLE = { home: "Home", collection: "MyCollection", smartpark: "SmartPark", kos: "KostBills", "kos-demo": "Demo KostBills" };
 const PROJECT_OF = { smartpark: "smartpark", kos: "kos", "kos-demo": "kos" };
@@ -29,7 +29,7 @@ function route() {
   current.mount(view);
   $$(".nav > a").forEach((a) => a.setAttribute("aria-current", a.dataset.route === name ? "page" : "false"));
   $("#nav-proj").setAttribute("aria-current", PROJECT_OF[name] ? "page" : "false");
-  $$("#nav-menu a").forEach((a) => a.setAttribute("aria-current", String(a.dataset.route === PROJECT_OF[name])));
+  renderProjectMenu();
   closeProjectMenu();
   const p = SITE.profile || {};
   document.title = name === "home" ? (p.name || "Portfolio") : `${ROUTE_TITLE[name]} · ${p.name || "Portfolio"}`;
@@ -40,6 +40,11 @@ function route() {
 const routing = { first: true };
 
 /* ---------- Project menu ---------- */
+function renderProjectMenu() {
+  const m = $("#nav-menu"); if (!m) return;
+  const cur = PROJECT_OF[routeName()];
+  m.innerHTML = PROJECT_NAV.map(([k, l, d, ic]) => `<a href="#${k}" data-route="${k}" aria-current="${k === cur}"><span class="nm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg></span><b>${l}</b><small>${pick(d)}</small></a>`).join("");
+}
 function setProjectMenu(open) {
   const b = $("#nav-proj"), m = $("#nav-menu"); if (!b || !m) return;
   b.setAttribute("aria-expanded", String(open)); m.hidden = !open;
@@ -103,7 +108,7 @@ function boot() {
     <nav class="nav" aria-label="Halaman">${NAV.map(([k, l]) => `<a href="#${k}" data-route="${k}">${l}</a>`).join("")}
       <div class="nav-drop" id="nav-drop">
         <button class="nav-proj" id="nav-proj" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="nav-menu">Project <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-        <div class="nav-menu" id="nav-menu" hidden>${PROJECT_NAV.map(([k, l, d, ic]) => `<a href="#${k}" data-route="${k}"><span class="nm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg></span><b>${l}</b><small>${d}</small></a>`).join("")}</div>
+        <div class="nav-menu" id="nav-menu" hidden></div>
       </div>
     </nav>
     ${STANDALONE ? `<button class="theme-btn" id="theme-btn" type="button"><i aria-hidden="true"></i><span>Auto</span></button>` : ""}
@@ -111,7 +116,14 @@ function boot() {
   <main id="view"></main>
   <footer class="footer"><div class="wrap"><span id="foot-name"></span><span><button class="btn ghost sm" id="admin-open" style="padding:2px 6px;color:var(--muted)">${ICON.lock} Admin login</button></span></div></footer>`;
   $("#admin-open").onclick = openAdminDialog;
+  renderProjectMenu();
   wireProjectMenu();
+  /* Language change: refresh the menu and let the current page update its text in place. */
+  document.addEventListener("langchange", () => {
+    renderProjectMenu();
+    $$("[data-setlang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setlang === LANG.get())));
+    if (current && current.onLang) current.onLang();
+  });
   if (STANDALONE) { $("#theme-btn").onclick = THEME.cycle; THEME.apply(THEME.get()); }
   renderChrome();
   window.addEventListener("hashchange", route);

@@ -233,23 +233,69 @@ test.describe("SmartPark", () => {
     await expect(page.locator("#sp-sel")).toContainText("Belum ada mobil terpilih");
   });
 
-  test("Modern / Tradisional theme switch is applied, remembered and keeps the map working", async ({ page }) => {
+  test("background dropdown: Modern, Tradisional, Redline, Cyber Mix — applied, remembered, map keeps working", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/#smartpark");
-    await expect(page.locator('[data-sptheme="modern"]')).toHaveAttribute("aria-pressed", "true");
-    const modernBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    await page.click('[data-sptheme="tradisional"]');
-    await expect(page.locator("body")).toHaveAttribute("data-sp-theme", "tradisional");
-    const trad = await page.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, img: getComputedStyle(document.body).backgroundImage, map: SP.colors().asphalt }));
-    expect(trad.bg).not.toBe(modernBg);
-    expect(trad.img).toContain("data:image/svg+xml");
-    expect(trad.map).toBe("#2a2126");
+    const opts = await page.locator("#sp-theme option").evaluateAll((os) => os.map((o) => o.value));
+    expect(opts).toEqual(["modern", "tradisional", "redline", "cyber"]);
+    await expect(page.locator("#sp-theme")).toHaveValue("modern");
+    const look = () => page.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, img: getComputedStyle(document.body).backgroundImage, map: SP.colors().asphalt, ink: getComputedStyle(document.body).color }));
+    const modern = await look();
+    const expected = { tradisional: "#2a2126", redline: "#151926", cyber: "#17143a" };
+    for (const [t, asphalt] of Object.entries(expected)) {
+      await page.selectOption("#sp-theme", t);
+      await expect(page.locator("body")).toHaveAttribute("data-sp-theme", t);
+      const l = await look();
+      expect(l.bg).not.toBe(modern.bg);
+      expect(l.map).toBe(asphalt);
+      expect(l.img).not.toBe("none");
+    }
     await page.reload();
-    await expect(page.locator('[data-sptheme="tradisional"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#sp-theme")).toHaveValue("cyber");
+    await expect(page.locator("body")).toHaveAttribute("data-sp-theme", "cyber");
     await page.click("#sp-enter");
     await expect(page.locator("#sp-sel")).toContainText("Menunggu di gerbang");
     await page.click('.nav > a[data-route="home"]');
     await expect(page.locator("body")).not.toHaveAttribute("data-sp-theme", /.+/);
+    await page.goBack();
+    await expect(page.locator("#sp-theme")).toHaveValue("cyber");
+    expect(errors).toEqual([]);
+  });
+
+  test("hero facts: 2 basement, 100 sensor slots, EV · Wanita · VIP (no Lajur kiri)", async ({ page }) => {
+    await page.goto("/#smartpark");
+    const facts = page.locator(".sp-hero-facts span");
+    await expect(facts).toHaveCount(3);
+    await expect(page.locator(".sp-hero-facts")).not.toContainText("Lajur kiri");
+    await expect(page.locator(".sp-hero-facts")).toContainText("100 slot bersensor");
+  });
+
+  test("ID/EN switch updates the page in place and keeps the simulation", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#smartpark");
+    await page.click("#sp-enter");
+    await expect(page.locator("#sp-sel")).toContainText("Menunggu di gerbang");
+    const carId = await page.evaluate(() => PAGES.smartpark.sel);
+    await page.click('.sp-hero [data-setlang="en"]');
+    await expect(page.locator('.sp-hero [data-setlang="en"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".sp-hero p")).toContainText("SmartPark is mall parking navigation");
+    await expect(page.locator("#sp-sel")).toContainText(`Car #${carId}`);
+    await expect(page.locator("#sp-sel")).toContainText("Waiting at the gate");
+    await expect(page.locator("#sp-enter")).toContainText("Enter mall");
+    await expect(page.locator("#sp-log")).toContainText(`Car #${carId} waiting at the mall entry gate`);
+    await expect(page.locator(".sp-hero-facts")).toContainText("EV · Ladies · VIP");
+    expect(await page.evaluate(() => PAGES.smartpark.sel)).toBe(carId);
+    await page.click('[data-flow="scan"]');
+    await expect(page.locator(".modal")).toContainText("Scan QRIS at the gate");
+    await page.click("#qris-ok");
+    await page.click("#nav-proj");
+    await expect(page.locator("#nav-menu")).toContainText("Mall parking navigation");
+    await page.click('#nav-menu a[data-route="kos"]');
+    await expect(page.locator(".kl-title")).toContainText("Billing for 1,000 rooms");
+    await page.goBack();
+    await expect(page.locator(".sp-hero p")).toContainText("SmartPark is mall parking navigation");
+    await page.click('.sp-hero [data-setlang="id"]');
+    await expect(page.locator(".sp-hero p")).toContainText("SmartPark adalah navigasi parkir mal");
     expect(errors).toEqual([]);
   });
 });
@@ -260,12 +306,20 @@ test.describe("KostBills", () => {
     await page.goto("/#kos");
     await expect(page.locator(".kl-title")).toContainText("Tagihan 1.000 kamar kos");
     await expect(page.locator("#kl-demo")).toHaveText(/Coba Demo KostBills/);
-    await page.click('[data-lang="en"]');
+    const stats = page.locator(".kl-stats");
+    await expect(stats).not.toContainText("kamar dikelola");
+    await expect(stats).not.toContainText("blok × 4 lantai");
+    await expect(stats).not.toContainText("tarif flat");
+    await expect(stats.locator("b[data-count]")).toHaveCount(5);
+    expect(await stats.locator("b[data-count]").evaluateAll((bs) => bs.slice(0, 3).map((b) => b.dataset.count))).toEqual(["850", "100", "50"]);
+    await expect(page.locator(".kl-faq details")).toHaveCount(3);
+    await expect(page.locator(".kl-faq")).not.toContainText(/listrik ikut ditagihkan|electricity billed/i);
+    await page.click('.kl-hero [data-setlang="en"]');
     await expect(page.locator(".kl-title")).toContainText("Billing for 1,000 rooms");
     await expect(page.locator("#kl-demo")).toHaveText(/Try the KostBills Demo/);
     await page.reload();
     await expect(page.locator(".kl-title")).toContainText("Billing for 1,000 rooms");
-    await page.click('[data-lang="id"]');
+    await page.click('.kl-hero [data-setlang="id"]');
     await expect(page.locator(".kl-title")).toContainText("Tagihan 1.000 kamar kos");
 
     for (const k of ["rooms", "bills", "status", "reminder", "wa", "reports"]) {
@@ -340,6 +394,47 @@ test.describe("KostBills", () => {
       await page.click(`[data-kv="${view}"]`);
       await expect(page.locator(`[data-kv="${view}"]`)).toHaveAttribute("aria-current", /page|true/);
     }
+    expect(errors).toEqual([]);
+  });
+
+  test("demo: no fact cards, room classes, and the ID/EN switch translates everything", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-demo");
+    await expect(page.locator(".kos-facts")).toHaveCount(0);
+    await expect(page.locator(".kos-hero")).not.toContainText("sudah termasuk semua");
+    await page.click('[data-kv="rooms"]');
+    const cards = page.locator(".class-card");
+    await expect(cards).toHaveCount(3);
+    expect(await cards.locator("b").allInnerTexts()).toEqual(["850", "100", "50"]);
+    await expect(page.locator(".room.t-premium")).toHaveCount(10);
+    await expect(page.locator(".room.t-expensive")).toHaveCount(5);
+    await page.selectOption("#kr-type", "Expensive");
+    await page.click('[data-rmode="table"]');
+    await page.click('[data-rblock=""]');
+    await expect(page.locator(".pager")).toContainText("1–50 dari 50");
+    await expect(page.locator("table.t tbody .rtype").first()).toHaveText("Expensive");
+
+    await page.click('.kos-hero [data-setlang="en"]');
+    await expect(page.locator(".kos-hero h1")).toHaveText("KostBills Demo");
+    await expect(page.locator(".kos-back")).toContainText("Back to the KostBills page");
+    await expect(page.locator("#kos-nav")).toContainText("Monthly bills");
+    await expect(page.locator(".pager")).toContainText("1–50 of 50");
+    await expect(page.locator("#kr-type")).toHaveValue("Expensive");
+    await page.click('[data-kv="bills"]');
+    await page.selectOption("#kb-status", "Due Soon");
+    expect(new Set(await page.locator("table.t tbody .pill").allInnerTexts())).toEqual(new Set(["Due soon"]));
+    await page.locator("[data-pay]").first().click();
+    await expect(page.locator(".modal")).toContainText("Record payment");
+    await page.fill("#py-amt", "900000");
+    await page.click("#py-save");
+    await expect(page.locator("#py-err")).toContainText("The balance is");
+    await page.click(".modal [data-close]");
+    await page.click('[data-kv="overview"]');
+    await expect(page.locator(".kpi-row").first()).toContainText("Total Collected This Year");
+    await page.reload();
+    await expect(page.locator(".kos-hero h1")).toHaveText("KostBills Demo");
+    await page.click('.kos-hero [data-setlang="id"]');
+    await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
     expect(errors).toEqual([]);
   });
 });

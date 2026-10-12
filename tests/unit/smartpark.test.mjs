@@ -32,7 +32,8 @@ test("category rules: regular cars can't use EV/Ladies/VIP slots", () => {
   assert.equal(SP.allowed(car, SP.SLOT.B1), true);
   const r = SP.canPark(w[1], car, SP.SLOT.A9);
   assert.equal(r.ok, false);
-  assert.match(r.reason, /VIP/);
+  assert.match(r.reason[0], /VIP/);
+  assert.match(r.reason[1], /VIP members only/);
 });
 
 test("auto-select prefers the matching category slot for EV cars", () => {

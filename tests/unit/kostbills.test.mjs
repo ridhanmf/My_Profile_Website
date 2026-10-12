@@ -19,8 +19,8 @@ test("demo data: 1,000 rooms in blocks A–J, 4 floors × 25 rooms", () => {
 test("billing rule: every bill is the flat Rp850.000 rent, nothing else (no electricity line)", () => {
   const { KOS } = fresh();
   assert.equal(KOS.RENT, 850000);
-  assert.match(KOS.INCLUDED, /token prabayar/i);
-  assert.equal(KOS.STATUS_LABEL["Due Soon"], "Segera jatuh tempo");
+  assert.match(KOS.included(), /token prabayar/i);
+  assert.equal(KOS.statusLabel("Due Soon"), "Segera jatuh tempo");
   assert.equal(KOS.monthLabel("2026-08"), "Agustus 2026");
   assert.ok(KOS.D.bills.length > 1000);
   KOS.D.bills.forEach((b) => {
@@ -80,4 +80,34 @@ test("revenue summary adds up", () => {
   assert.equal(s.outstanding, s.billed - s.collected);
   assert.equal(s.billed, s.count * 850000);
   assert.equal(Object.values(s.st).reduce((a, b) => a + b, 0), s.count);
+});
+
+test("room classes: every block has 10 Premium and 5 Expensive rooms, the rest Regular", () => {
+  const { KOS } = fresh();
+  for (const b of KOS.BLOCKS) {
+    const rs = KOS.D.rooms.filter((r) => r.block === b);
+    const n = (t) => rs.filter((r) => r.type === t).length;
+    assert.deepEqual([n("Regular"), n("Premium"), n("Expensive")], [85, 10, 5], `block ${b}`);
+  }
+  assert.ok(KOS.D.rooms.every((r) => r.rent === 850000), "every class keeps the flat rent");
+});
+
+test("demo data saved before room classes gets classes on load", () => {
+  const e = loadEngine(["engine/kostbills.js"], ["KOS"]);
+  e.KOS.load();
+  const old = JSON.parse(JSON.stringify(e.KOS.D));
+  old.rooms.forEach((r) => delete r.type);
+  e.storage.set("kos-demo-v3", JSON.stringify(old));
+  e.KOS.load();
+  assert.equal(e.KOS.D.rooms.filter((r) => r.type === "Expensive").length, 50);
+  assert.equal(e.KOS.D.rooms.filter((r) => r.type === "Premium").length, 100);
+});
+
+test("labels follow the chosen language", () => {
+  const e = loadEngine(["engine/kostbills.js"], ["KOS", "LANG"]);
+  assert.equal(e.KOS.monthLabel("2026-08"), "Agustus 2026");
+  e.LANG.cur = "en";
+  assert.equal(e.KOS.monthLabel("2026-08"), "August 2026");
+  assert.equal(e.KOS.statusLabel("Overdue"), "Overdue");
+  assert.equal(e.KOS.roomLabel("Vacant"), "Vacant");
 });

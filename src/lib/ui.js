@@ -72,3 +72,15 @@ function waNumber(n) {
 }
 const waDisplay = (n) => { const d = "0" + waNumber(n).slice(2); return d.replace(/^(\d{4})(\d{4})(\d+)$/, "$1-$2-$3"); };
 function waHref(text, num) { return `https://wa.me/${waNumber(num || (adminData().profile || {}).whatsapp)}?text=${encodeURIComponent(text)}`; }
+
+/* ---------- Language switch (🇮🇩 ID / 🇬🇧 EN) used by the project pages ---------- */
+function langSwitch(extra = "") {
+  const l = LANG.get();
+  return `<div class="seg lang-switch ${extra}" role="group" aria-label="Bahasa / Language">` +
+    `<button type="button" data-setlang="id" aria-pressed="${l === "id"}" title="Bahasa Indonesia"><span aria-hidden="true">🇮🇩</span> ID</button>` +
+    `<button type="button" data-setlang="en" aria-pressed="${l === "en"}" title="English"><span aria-hidden="true">🇬🇧</span> EN</button></div>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-setlang]");
+  if (b) LANG.set(b.dataset.setlang);
+});
