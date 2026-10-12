@@ -437,4 +437,23 @@ test.describe("KostBills", () => {
     await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
     expect(errors).toEqual([]);
   });
+
+  test("tenant phone simulation: H-7 reminder as the tenant sees it", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-demo");
+    await page.click('[data-kv="bills"]');
+    await page.selectOption("#kb-status", "Due Soon");
+    const sevenDays = await page.evaluate(() => KOS.D.bills.find((b) => KOS.status(b) === "Due Soon" && KOS.daysUntil(b.due) === 7 && b.month === KOS.ym(new Date())));
+    test.skip(!sevenDays, "no bill is exactly 7 days from its due date today");
+    await page.fill("#kb-q", sevenDays.roomId);
+    await page.locator(`[data-phone="${sevenDays.id}"]`).click();
+    await expect(page.locator(".modal")).toContainText("Tampilan di HP penghuni");
+    await expect(page.locator(".modal .pill").first()).toContainText("H-7");
+    await expect(page.locator(".tp-msg").first()).toContainText("jatuh tempo 7 hari lagi");
+    await expect(page.locator(".tp-card")).toContainText(sevenDays.id);
+    await expect(page.locator(".modal a.btn.wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=Halo/);
+    await page.click(".modal #tp-pay");
+    await expect(page.locator(".modal")).toContainText("Catat pembayaran");
+    expect(errors).toEqual([]);
+  });
 });

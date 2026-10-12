@@ -14,9 +14,10 @@ const typeCount = (rooms) => KOS.TYPES.map((t) => [t, rooms.filter((r) => r.type
    number (the profile number), never to the generated tenants' phone numbers, which are fictional. */
 function reminderText(b) {
   const t = KOS.IX.tenant[b.tenantId] || {}, d = KOS.daysUntil(b.due), bal = idr(KOS.balance(b));
-  return tt(`Halo ${t.name || "Bapak/Ibu"}, ini pengingat dari ${PROPERTY.name}. Tagihan sewa kamar ${b.roomId} untuk ${KOS.monthLabel(b.month)} sebesar ${bal} ${d < 0 ? `sudah lewat jatuh tempo sejak ${tgl(b.due)}` : `jatuh tempo pada ${tgl(b.due)}`}. Mohon segera melakukan pembayaran. Terima kasih.`,
-    `Hello ${t.name || "there"}, this is a reminder from ${PROPERTY.name}. The rent for room ${b.roomId} for ${KOS.monthLabel(b.month)}, ${bal}, ${d < 0 ? `has been overdue since ${tgl(b.due)}` : `is due on ${tgl(b.due)}`}. Please make the payment soon. Thank you.`);
+  return tt(`Halo ${t.name || "Bapak/Ibu"}, ini pengingat dari ${PROPERTY.name}. Tagihan sewa kamar ${b.roomId} untuk ${KOS.monthLabel(b.month)} sebesar ${bal} ${d < 0 ? `sudah lewat jatuh tempo sejak ${tgl(b.due)}` : d === 0 ? `jatuh tempo hari ini, ${tgl(b.due)}` : `jatuh tempo ${d} hari lagi, pada ${tgl(b.due)}`}. Mohon segera melakukan pembayaran. Terima kasih.`,
+    `Hello ${t.name || "there"}, this is a reminder from ${PROPERTY.name}. The rent for room ${b.roomId} for ${KOS.monthLabel(b.month)}, ${bal}, ${d < 0 ? `has been overdue since ${tgl(b.due)}` : d === 0 ? `is due today, ${tgl(b.due)}` : `is due in ${d} day${d === 1 ? "" : "s"}, on ${tgl(b.due)}`}. Please make the payment soon. Thank you.`);
 }
+const phoneBtn = (b) => `<button class="icon-btn phone-ic" data-phone="${b.id}" title="${tt("Lihat di HP penghuni", "View on the tenant's phone")}" aria-label="${tt("Lihat di HP penghuni", "View on the tenant's phone")} ${b.roomId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg></button>`;
 const waReminder = (b) => `<a class="icon-btn wa-ic" href="${esc(waHref(reminderText(b)))}" target="_blank" rel="noopener" title="${tt("Kirim pengingat WhatsApp", "Send a WhatsApp reminder")}" aria-label="${tt("Kirim pengingat WhatsApp untuk", "Send a WhatsApp reminder for")} ${b.roomId}">${WA_ICON}</a>`;
 
 /* ---------- PDF (jsPDF loaded on demand) ---------- */
@@ -202,7 +203,7 @@ PAGES["kos-demo"] = {
       <div class="panel card-pad"><div class="card-title"><h3>${tt("Perlu ditindaklanjuti", "Needs follow-up")}</h3><button class="btn sm ghost" data-act="bills-overdue">${tt("Semua yang terlambat", "All overdue")} ${ICON.arrow}</button></div>
         <div style="display:grid;gap:2px">${od.slice().sort((a, b) => a.due.localeCompare(b.due)).slice(0, 4).concat(soon.slice().sort((a, b) => a.due.localeCompare(b.due)).slice(0, 3)).map((b) => { const t = KOS.IX.tenant[b.tenantId] || {}; const st = KOS.status(b); const d = KOS.daysUntil(b.due); return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-2)">
           <button style="border:0;background:none;padding:0;text-align:left;cursor:pointer;min-width:0;color:inherit" data-room="${b.roomId}"><b class="mono">${b.roomId}</b> <span>${esc(t.name || "")}</span><br><span class="muted" style="font-size:12px">${KOS.monthLabel(b.month)} · ${dueText(d)}</span></button>
-          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">${statusPill(st)}${waReminder(b)}<button class="btn sm" data-pay="${b.id}">${tt("Catat", "Record")}</button></span></div>`; }).join("") || `<p class="muted">${tt("Tidak ada tagihan yang terlambat atau segera jatuh tempo.", "Nothing overdue or due soon.")}</p>`}</div></div>
+          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">${statusPill(st)}${phoneBtn(b)}${waReminder(b)}<button class="btn sm" data-pay="${b.id}">${tt("Catat", "Record")}</button></span></div>`; }).join("") || `<p class="muted">${tt("Tidak ada tagihan yang terlambat atau segera jatuh tempo.", "Nothing overdue or due soon.")}</p>`}</div></div>
     </div>`;
   },
   drawRevenueChart(series) {
@@ -348,7 +349,7 @@ PAGES["kos-demo"] = {
     <div class="table-wrap"><table class="t"><thead><tr><th>Invoice</th><th>${tt("Kamar", "Room")}</th><th>${tt("Penghuni", "Tenant")}</th><th>${tt("Bulan", "Month")}</th><th>${tt("Jatuh tempo", "Due")}</th><th class="r">${tt("Jumlah", "Amount")}</th><th class="r">${tt("Sisa", "Balance")}</th><th>Status</th><th></th></tr></thead><tbody>
       ${page.map((b) => { const t = KOS.IX.tenant[b.tenantId] || {}; const s = KOS.status(b); const d = KOS.daysUntil(b.due);
         return `<tr><td class="mono">${b.id}</td><td><button class="btn ghost sm mono" style="padding:2px 4px" data-room="${b.roomId}">${b.roomId}</button></td><td>${esc(t.name || "")}</td><td>${KOS.monthLabel(b.month)}</td><td class="num">${tgl(b.due)}${s === "Due Soon" ? `<br><span class="muted" style="font-size:11.5px">${d === 0 ? tt("hari ini", "today") : tt(`${d} hari lagi`, `in ${d} day${d === 1 ? "" : "s"}`)}</span>` : ""}</td><td class="r num">${idr(KOS.total(b))}</td><td class="r num">${KOS.balance(b) ? idr(KOS.balance(b)) : "—"}</td><td>${statusPill(s)}</td>
-        <td style="white-space:nowrap;text-align:right">${s !== "Paid" ? `<button class="btn sm" data-pay="${b.id}">${tt("Catat pembayaran", "Record payment")}</button> ` : ""}${s === "Overdue" || s === "Due Soon" ? waReminder(b) : ""}<button class="icon-btn" data-inv="${b.id}" title="${tt("Unduh PDF", "Download PDF")} ${s === "Paid" ? tt("kuitansi", "receipt") : "invoice"}" aria-label="${tt("Unduh PDF", "Download PDF")}">${ICON.download}</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted" style="padding:24px">${tt("Tidak ada tagihan yang cocok dengan filter itu.", "No bills match those filters.")}</td></tr>`}
+        <td style="white-space:nowrap;text-align:right">${s !== "Paid" ? `<button class="btn sm" data-pay="${b.id}">${tt("Catat pembayaran", "Record payment")}</button> ` : ""}${s === "Overdue" || s === "Due Soon" ? phoneBtn(b) + waReminder(b) : ""}<button class="icon-btn" data-inv="${b.id}" title="${tt("Unduh PDF", "Download PDF")} ${s === "Paid" ? tt("kuitansi", "receipt") : "invoice"}" aria-label="${tt("Unduh PDF", "Download PDF")}">${ICON.download}</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted" style="padding:24px">${tt("Tidak ada tagihan yang cocok dengan filter itu.", "No bills match those filters.")}</td></tr>`}
     </tbody></table></div>${this.pager("bills", list.length, per)}`;
   },
 
@@ -428,11 +429,56 @@ PAGES["kos-demo"] = {
         </div></div>
         <div><b style="font-size:14px">${tt("Riwayat tagihan", "Billing history")}</b>
         <div class="table-wrap" style="margin-top:8px"><table class="t" style="min-width:560px"><thead><tr><th>${tt("Bulan", "Month")}</th><th>Invoice</th><th>${tt("Jatuh tempo", "Due")}</th><th class="r">${tt("Jumlah", "Amount")}</th><th class="r">${tt("Sisa", "Balance")}</th><th>Status</th><th></th></tr></thead><tbody>
-        ${bills.map((b) => { const s = KOS.status(b); return `<tr><td>${KOS.monthLabel(b.month)}</td><td class="mono">${b.id}</td><td class="num">${tgl(b.due)}</td><td class="r num">${idr(KOS.total(b))}</td><td class="r num">${KOS.balance(b) ? idr(KOS.balance(b)) : "—"}</td><td>${statusPill(s)}</td><td style="text-align:right;white-space:nowrap">${s !== "Paid" ? `<button class="btn sm" data-pay="${b.id}">${tt("Catat", "Record")}</button>${waReminder(b)}` : ""}<button class="icon-btn" data-inv="${b.id}" aria-label="${tt("Unduh PDF", "Download PDF")}">${ICON.download}</button></td></tr>`; }).join("") || `<tr><td colspan="7" class="muted">${tt("Belum ada tagihan untuk kamar ini.", "No bills for this room yet.")}</td></tr>`}
+        ${bills.map((b) => { const s = KOS.status(b); return `<tr><td>${KOS.monthLabel(b.month)}</td><td class="mono">${b.id}</td><td class="num">${tgl(b.due)}</td><td class="r num">${idr(KOS.total(b))}</td><td class="r num">${KOS.balance(b) ? idr(KOS.balance(b)) : "—"}</td><td>${statusPill(s)}</td><td style="text-align:right;white-space:nowrap">${s !== "Paid" ? `<button class="btn sm" data-pay="${b.id}">${tt("Catat", "Record")}</button>${phoneBtn(b)}${waReminder(b)}` : ""}<button class="icon-btn" data-inv="${b.id}" aria-label="${tt("Unduh PDF", "Download PDF")}">${ICON.download}</button></td></tr>`; }).join("") || `<tr><td colspan="7" class="muted">${tt("Belum ada tagihan untuk kamar ini.", "No bills for this room yet.")}</td></tr>`}
         </tbody></table></div></div>
         ${past.length ? `<p class="muted" style="font-size:13px">${tt("Penghuni sebelumnya", "Previous tenants")}: ${past.map((p) => `${esc(p.name)} (${tgl(p.checkIn)} → ${tgl(p.checkOut)})`).join(", ")}</p>` : ""}`,
     });
     m.addEventListener("click", (e) => this.onClick(e, m));
+  },
+  /* What the tenant sees: the reminder arriving on their phone in WhatsApp (simulation). */
+  openPhone(id) {
+    const b = KOS.IX.bill[id]; if (!b) return;
+    const t = KOS.IX.tenant[b.tenantId] || {}, r = KOS.IX.room[b.roomId] || {};
+    const d = KOS.daysUntil(b.due), s = KOS.status(b);
+    const tag = d < 0 ? `H+${-d}` : d === 0 ? "H" : `H-${d}`;
+    const now = new Date(), hhmm = `${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
+    const msg = reminderText(b);
+    const m = openModal({
+      title: `${tt("Tampilan di HP penghuni", "On the tenant's phone")} · ${b.roomId} <span class="pill ${KOS.STATUS_PILL[s]}" style="vertical-align:3px;margin-left:6px">${tag} · ${stLabel(s)}</span>`, wide: true,
+      body: `<div class="tp-wrap">
+        <div class="tp-phone" role="img" aria-label="${tt("Simulasi layar HP penghuni yang menerima pengingat WhatsApp", "Simulated tenant phone receiving a WhatsApp reminder")}">
+          <div class="tp-screen">
+            <div class="tp-status"><b>${hhmm}</b><span class="tp-notch"></span><span class="tp-icons">▂▄▆ 4G ▮</span></div>
+            <div class="tp-notif"><span class="tp-wa">${WA_ICON}</span><div><b>${PROPERTY.name}</b><span>${esc(msg.slice(0, 64))}…</span></div><small>${tt("sekarang", "now")}</small></div>
+            <div class="tp-head"><span class="tp-back">‹</span><span class="tp-avatar">GK</span><div><b>${PROPERTY.name} <i title="${tt("Akun bisnis", "Business account")}">✔</i></b><small>${tt("Akun bisnis · online", "Business account · online")}</small></div></div>
+            <div class="tp-chat">
+              <div class="tp-day">${tt("Hari ini", "Today")}</div>
+              <div class="tp-msg">${esc(msg)}<time>${hhmm}</time></div>
+              <div class="tp-msg tp-card">
+                <div class="tp-card-head"><b>${tt("Rincian tagihan", "Bill details")}</b><span class="tp-chip">${tag}</span></div>
+                <dl><dt>Invoice</dt><dd class="mono">${b.id}</dd><dt>${tt("Kamar", "Room")}</dt><dd>${b.roomId} · ${r.type || "Regular"}</dd><dt>${tt("Bulan", "Month")}</dt><dd>${KOS.monthLabel(b.month)}</dd><dt>${tt("Jatuh tempo", "Due")}</dt><dd>${tgl(b.due)}</dd><dt>${tt("Sisa tagihan", "Balance")}</dt><dd><b>${idr(KOS.balance(b))}</b></dd></dl>
+                <p>${tt("Bayar lewat QRIS atau transfer BCA / Mandiri / BRI, lalu kirim bukti bayar di chat ini.", "Pay with QRIS or a BCA / Mandiri / BRI transfer, then send the receipt in this chat.")}</p>
+                <time>${hhmm}</time>
+              </div>
+            </div>
+            <div class="tp-input"><span>${tt("Ketik pesan", "Message")}</span><i>➤</i></div>
+          </div>
+        </div>
+        <div class="tp-side">
+          <h4>${tt("Yang dialami penghuni", "What the tenant sees")}</h4>
+          <ol class="tp-steps">
+            <li>${tt(`Notifikasi WhatsApp masuk saat tagihan ${d >= 0 ? `tinggal ${d} hari lagi` : `terlambat ${-d} hari`}.`, `A WhatsApp notification arrives ${d >= 0 ? `${d} day${d === 1 ? "" : "s"} before the due date` : `${-d} day${d === -1 ? "" : "s"} after the due date`}.`)}</li>
+            <li>${tt("Pesan berisi nama, kamar, bulan, sisa tagihan, dan tanggal jatuh tempo.", "The message has the name, room, month, balance and due date.")}</li>
+            <li>${tt("Rincian tagihan dan cara bayar ada di pesan berikutnya.", "Bill details and how to pay follow in the next message.")}</li>
+          </ol>
+          <dl class="kv"><dt>${tt("Penghuni", "Tenant")}</dt><dd>${esc(t.name || "—")}</dd><dt>${tt("Masuk", "Moved in")}</dt><dd>${tgl(t.checkIn)}</dd><dt>${tt("Jatuh tempo", "Due")}</dt><dd>${tt(`tgl ${t.dueDay} setiap bulan`, `day ${t.dueDay} of each month`)}</dd></dl>
+          <p class="muted" style="font-size:12.5px">${tt(`Simulasi. Tombol di bawah membuka pesan yang sama di WhatsApp ke nomor pengelola ${waDisplay((adminData().profile || {}).whatsapp)}, bukan ke nomor penghuni contoh.`, `Simulation. The button below opens the same message in WhatsApp to the manager's number ${waDisplay((adminData().profile || {}).whatsapp)}, not the sample tenant's number.`)}</p>
+        </div>
+      </div>`,
+      foot: `<button class="btn" data-close>${tt("Tutup", "Close")}</button>${s !== "Paid" ? `<button class="btn" id="tp-pay">${tt("Catat pembayaran", "Record payment")}</button>` : ""}<a class="btn wa" href="${esc(waHref(msg))}" target="_blank" rel="noopener">${WA_ICON} ${tt("Kirim via WhatsApp", "Send via WhatsApp")}</a>`,
+    });
+    const pay = m.querySelector("#tp-pay"); if (pay) pay.onclick = () => { closeModal(); this.openPay(b.id); };
+    requestAnimationFrame(() => { m.scrollTop = 0; });
   },
   openPay(id) {
     const b = KOS.IX.bill[id]; if (!b) return;
@@ -466,6 +512,7 @@ PAGES["kos-demo"] = {
     let x;
     if ((x = d("kv"))) return this.setView(x.dataset.kv);
     if ((x = d("pay"))) { e.stopPropagation(); return this.openPay(x.dataset.pay); }
+    if ((x = d("phone"))) { e.stopPropagation(); return this.openPhone(x.dataset.phone); }
     if ((x = d("inv"))) { e.stopPropagation(); toast(tt("Menyiapkan PDF…", "Preparing PDF…"), 1500); return pdfInvoice(KOS.IX.bill[x.dataset.inv]); }
     if (e.target.closest(".wa-ic")) return;
     if ((x = d("room"))) { if (scope) return; return this.openRoom(x.dataset.room); }
