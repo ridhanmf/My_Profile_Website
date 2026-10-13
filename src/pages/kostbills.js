@@ -116,11 +116,19 @@ function csvOf(rows) { return rows.map((r) => r.map((v) => { const s = String(v 
 /* ---------- Page ---------- */
 const curY = () => KOS.today().slice(0, 4), curMo = () => KOS.today().slice(5, 7);
 const KOS_ICONS = {};
+/* Demo roles (no password): the demo runs on sample data kept in this browser only, so trying the Admin or
+   Management role here can never touch live data. Live data needs a real sign-in (#kos-app). */
+const DEMO_ROLES = ["visitor", "admin", "management"];
+const DEMO_ROLE = {
+  get() { const r = sess.get("kos-demo-role", "visitor"); return DEMO_ROLES.includes(r) ? r : "visitor"; },
+  set(r) { sess.set("kos-demo-role", DEMO_ROLES.includes(r) ? r : "visitor"); },
+};
 PAGES["kos-demo"] = {
   view: "overview",
-  /* The public demo is the "Pengunjung Demo" role: everything visible, nothing can be changed.
-     (There is no server behind it either: its sample data lives only in this browser.) */
+  /* Demo roles: "admin" may change the sample data; "management" sees overview, bills and reports;
+     "visitor" sees everything read-only. Set in mount() from DEMO_ROLE. */
   ro: true,
+  role: "visitor",
   f: {
     rooms: { block: "A", floor: "", status: "", type: "", q: "", mode: "map", page: 0 },
     tenants: { q: "", active: "1", page: 0 },
@@ -131,6 +139,7 @@ PAGES["kos-demo"] = {
   mount(view) {
     this.el = view;
     if (SERVER && KOS_PUBLIC.demo === false) return this.paintDisabled();
+    this.role = DEMO_ROLE.get(); this.ro = this.role !== "admin";
     KOS.load();
     const saved = store.get("kos-view", null); if (saved) this.view = saved;
     view.addEventListener("click", (e) => this.onClick(e));
@@ -169,8 +178,11 @@ PAGES["kos-demo"] = {
     $("#kos-nav").innerHTML = items.map(([k, l, b]) => `<button data-kv="${k}" aria-current="${this.view === k}"><span class="kn-l">${icons[k] || KOS_ICONS[k] || ""}${l}</span>${b ? `<span class="badge num" title="${tt("Tagihan terlambat", "Overdue bills")}">${nf(b)}</span>` : ""}</button>`).join("") + this.navFooter();
   },
   /* Visitor role: every section, read-only. */
-  navItems(od) { return [["overview", tt("Ringkasan", "Overview")], ["rooms", tt("Kamar", "Rooms")], ["tenants", tt("Penghuni", "Tenants")], ["bills", tt("Tagihan bulanan", "Monthly bills"), od], ["trx", tt("Transaksi", "Transactions")], ["reports", tt("Laporan pendapatan", "Revenue reports")]]; },
-  navFooter() { return this.ro ? `<div class="sep"></div><a class="kn-role" href="#kos-role">${tt("Ganti peran", "Switch role")}</a>` : `<div class="sep"></div><button data-act="reset-demo" style="font-weight:500;color:var(--muted);font-size:13px">${tt("Atur ulang data demo", "Reset demo data")}</button>`; },
+  navItems(od) {
+    const all = [["overview", tt("Ringkasan", "Overview")], ["rooms", tt("Kamar", "Rooms")], ["tenants", tt("Penghuni", "Tenants")], ["bills", tt("Tagihan bulanan", "Monthly bills"), od], ["trx", tt("Transaksi", "Transactions")], ["reports", tt("Laporan pendapatan", "Revenue reports")]];
+    return this.role === "management" ? all.filter(([k]) => ["overview", "bills", "reports"].includes(k)) : all;
+  },
+  navFooter() { return `<div class="sep"></div>${this.ro ? "" : `<button data-act="reset-demo" style="font-weight:500;color:var(--muted);font-size:13px">${tt("Atur ulang data demo", "Reset demo data")}</button>`}<a class="kn-role" href="#kos-role">${tt("Ganti peran", "Switch role")}</a>`; },
   render() {
     this.nav();
     const el = $("#kos-main");
@@ -178,7 +190,13 @@ PAGES["kos-demo"] = {
     if (this.after) { this.after(); this.after = null; }
   },
   noteHtml() {
-    return `<div class="demo-note"><b>${tt("Pengunjung Demo · hanya lihat", "Demo visitor · view only")}</b><span>${tt(`1.000 kamar dengan penghuni dan tagihan contoh. Sewa ${KOS.priceLabel()}/bulan, sudah termasuk semua kecuali listrik (token prabayar). Peran ini hanya bisa melihat; mengubah data dilakukan Admin.`, `1,000 rooms with sample tenants and bills. Rent ${KOS.priceLabel()}/month, all-in except electricity (prepaid token). This role can only look; changes are made by an Admin.`)}</span><a class="btn sm" href="#kos-role">${tt("Ganti peran", "Switch role")}</a></div>`;
+    const base = tt(`1.000 kamar dengan penghuni dan tagihan contoh. Sewa ${KOS.priceLabel()}/bulan, sudah termasuk semua kecuali listrik (token prabayar).`, `1,000 rooms with sample tenants and bills. Rent ${KOS.priceLabel()}/month, all-in except electricity (prepaid token).`);
+    const [head, more] = {
+      admin: [tt("Admin (demo) · tanpa password", "Admin (demo) · no password"), tt("Anda bisa mencatat pembayaran, mendaftarkan dan mengeluarkan penghuni, serta membuat tagihan. Perubahan hanya tersimpan di browser ini dan tidak menyentuh data operasional.", "You can record payments, check tenants in and out and create bills. Changes stay in this browser and never touch live data.")],
+      management: [tt("Management (demo) · hanya lihat", "Management (demo) · view only"), tt("Ringkasan, tagihan bulanan, dan laporan pendapatan. Peran ini tidak bisa mengubah data.", "Overview, monthly bills and revenue reports. This role can't change data.")],
+      visitor: [tt("Pengunjung Demo · hanya lihat", "Demo visitor · view only"), tt("Peran ini hanya bisa melihat; mengubah data dilakukan Admin.", "This role can only look; changes are made by an Admin.")],
+    }[this.role];
+    return `<div class="demo-note demo-role-${this.role}"><b>${head}</b><span>${base} ${more}</span><a class="btn sm" href="#kos-role">${tt("Ganti peran", "Switch role")}</a></div>`;
   },
   /* Action buttons for one bill row. Demo visitor: phone preview, WhatsApp preview to the manager, PDF. */
   rowActions(b, s, opts = {}) {
@@ -457,7 +475,7 @@ PAGES["kos-demo"] = {
         <dl class="kv"><dt>${tt("Kelas", "Class")}</dt><dd>${typeChip(r.type)}</dd><dt>${tt("Blok / lantai", "Block / floor")}</dt><dd>${tt("Blok", "Block")} ${r.block} · ${tt("Lantai", "Floor")} ${r.floor}</dd><dt>${tt("Sewa", "Rent")}</dt><dd class="num">${idr(r.rent || KOS.RENT)} / ${tt("bulan", "month")}</dd><dt>${tt("Termasuk", "Included")}</dt><dd style="font-weight:500">${tt("Kebersihan, keamanan, perawatan", "Cleaning, security, maintenance")}</dd><dt>${tt("Listrik", "Electricity")}</dt><dd style="font-weight:500">${tt("Token prabayar penghuni (tidak ditagihkan)", "Tenant's prepaid token (not billed)")}</dd>
           ${t ? `<dt>${tt("Penghuni", "Tenant")}</dt><dd>${esc(t.name)}</dd><dt>${tt("Telepon", "Phone")}</dt><dd class="num">${esc(t.phone)}</dd><dt>${tt("Pekerjaan", "Occupation")}</dt><dd>${esc(t.job)}</dd><dt>${tt("Sejak", "Since")}</dt><dd class="num">${tgl(t.checkIn)}</dd><dt>${tt("Jatuh tempo", "Rent due")}</dt><dd>${tt(`Tanggal ${t.dueDay} setiap bulan`, `Day ${t.dueDay} of each month`)}</dd><dt>Deposit</dt><dd class="num">${idr(t.deposit)}</dd>` : ""}</dl>
         <div style="display:grid;gap:10px;align-content:start">
-          ${ro ? `<p class="muted" style="font-size:13px">${tt("Peran Pengunjung Demo hanya bisa melihat. Pendaftaran penghuni, checkout, dan pembayaran dilakukan oleh Admin.", "The demo visitor role is view-only. Check-in, check-out and payments are done by an Admin.")}</p>`
+          ${ro ? `<p class="muted" style="font-size:13px">${tt("Peran ini hanya bisa melihat. Pendaftaran penghuni, checkout, dan pembayaran dilakukan oleh Admin (coba lewat Ganti peran → Admin demo).", "This role is view-only. Check-in, check-out and payments are done by an Admin (try Switch role → Admin demo).")}</p>`
           : t ? `<button class="btn" data-act="checkout:${r.id}">${tt("Proses penghuni keluar", "Check out tenant")}</button>` : r.status !== "Maintenance" ? `<div id="ci-form" style="display:grid;gap:8px"><b>${tt("Daftarkan penghuni baru", "Check in a new tenant")}</b>
             <input class="input" id="ci-name" placeholder="${tt("Nama lengkap", "Full name")}"><input class="input" id="ci-phone" placeholder="${tt("Telepon, mis. 0812-3456-7890", "Phone, e.g. 0812-3456-7890")}" inputmode="tel">
             <input class="input" id="ci-job" placeholder="${tt("Pekerjaan", "Occupation")}"><label class="field"><span>${tt("Tanggal masuk (sewa jatuh tempo di tanggal ini setiap bulan)", "Move-in date (rent is due on this day each month)")}</span><input class="input" id="ci-date" type="date" value="${KOS.today()}"></label>

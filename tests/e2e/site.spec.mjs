@@ -343,8 +343,10 @@ test.describe("KostBills", () => {
     await expect(page).toHaveURL(/#kos-role$/);
     await expect(page.locator(".kos-hero h1")).toHaveText("Pilih peran");
     await expect(page.locator(".role-card")).toHaveCount(3);
-    await expect(page.locator('[data-role-card="admin"] .role-off')).toContainText("memerlukan server"); // no PHP behind this static build
-    await expect(page.locator('[data-role-card="management"] .role-off')).toHaveCount(1);
+    await expect(page.locator("#role-admin-demo")).toBeVisible();          // demo roles need no password
+    await expect(page.locator("#role-mgmt-demo")).toBeVisible();
+    await expect(page.locator(".role-card input[type=password]")).toHaveCount(0);
+    await expect(page.locator(".role-live")).toHaveCount(0);                // no PHP behind this static build: no live sign-in
     await page.click("#role-visitor");
     await expect(page).toHaveURL(/#kos-demo$/);
     await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
@@ -483,6 +485,48 @@ test.describe("KostBills", () => {
     const data = JSON.parse(readFileSync(await download.path(), "utf8"));
     expect(data.kind).toBe("kostbills-tenants");
     expect(data.tenants.map((t) => [t.name, t.phone])).toEqual([["Penghuni Uji E2E", "0812-0000-0099"]]);
+    expect(errors).toEqual([]);
+  });
+
+  test("demo Admin without a password: record payment, overpayment rejected, generate bills — all in this browser only", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-role");
+    await page.click("#role-admin-demo");
+    await expect(page).toHaveURL(/#kos-demo$/);
+    await expect(page.locator(".demo-note")).toContainText("Admin (demo) · tanpa password");
+    await expect(page.locator('[data-act="reset-demo"]')).toHaveCount(1);
+    await page.click('[data-kv="bills"]');
+    await page.selectOption("#kb-status", "Due Soon");
+    await page.locator("[data-pay]").first().click();
+    await expect(page.locator("#py-amt")).toHaveValue("850000");
+    await page.fill("#py-amt", "900000");
+    await page.click("#py-save");
+    await expect(page.locator("#py-err")).toContainText("Sisa tagihan");
+    await page.fill("#py-amt", "850000");
+    await page.click("#py-save");
+    await expect(page.locator(".toast")).toContainText("Rp 850.000");
+    await expect(page.locator('[data-act^="gen:"]').first()).toBeVisible();
+    await page.click('[data-kv="rooms"]');
+    await page.locator(".room.vac").first().click();
+    await expect(page.locator(".modal #ci-form")).toBeVisible();
+    await page.click(".modal [data-close]");
+    expect(await page.evaluate(() => KOS.MODE)).toBe("demo");
+    expect(errors).toEqual([]);
+  });
+
+  test("demo Management without a password: only overview, bills and reports, nothing editable", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-role");
+    await page.click("#role-mgmt-demo");
+    await expect(page.locator(".demo-note")).toContainText("Management (demo) · hanya lihat");
+    expect(await page.locator("#kos-nav [data-kv]").evaluateAll((b) => b.map((x) => x.dataset.kv))).toEqual(["overview", "bills", "reports"]);
+    await page.click('[data-kv="bills"]');
+    await expect(page.locator("table.t tbody tr").first()).toBeVisible();
+    await expect(page.locator('[data-pay], [data-act^="gen:"], [data-act="reset-demo"]')).toHaveCount(0);
+    await page.click(".demo-note a.btn");
+    await expect(page).toHaveURL(/#kos-role$/);
+    await page.click("#role-visitor");
+    await expect(page.locator(".demo-note")).toContainText("Pengunjung Demo");
     expect(errors).toEqual([]);
   });
 });

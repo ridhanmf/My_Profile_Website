@@ -40,3 +40,11 @@
 .bad-t { color: var(--bad); }
 .sim-btns { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 .kos-main form.panel { display: grid; gap: 12px; }
+
+.role-hint { margin: -4px 0 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+.role-card > .btn.primary { justify-content: center; }
+.role-live { border-top: 1px solid var(--line-2); padding-top: 10px; font-size: 13.5px; }
+.role-live summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.role-live[open] summary { margin-bottom: 10px; color: var(--ink-2); }
+.demo-note.demo-role-admin { background: var(--accent-soft); }
+.demo-note.demo-role-admin b { color: var(--accent); }

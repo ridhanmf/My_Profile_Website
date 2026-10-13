@@ -101,6 +101,8 @@ test.describe("Hostinger mode (PHP API)", () => {
     await page.waitForTimeout(500);
 
     await page.goto(BASE + "/#kos-role");
+    await expect(page.locator("#role-admin-demo")).toBeVisible(); // the no-password demo is offered too
+    await page.click('[data-role-card="admin"] .role-live summary');
     const form = page.locator('form[data-login="admin"]');
     await form.locator('input[name="username"]').fill("ridhan");
     await form.locator('input[name="password"]').fill("kos-portfolio-2026");
@@ -197,6 +199,7 @@ test.describe("Hostinger mode (PHP API)", () => {
     const ctx = await browser.newContext(); const page = await ctx.newPage();
     const errors = []; page.on("pageerror", (e) => errors.push(String(e)));
     await page.goto(BASE + "/#kos-role");
+    await page.click('[data-role-card="management"] .role-live summary');
     const form = page.locator('form[data-login="management"]');
     await form.locator('input[name="username"]').fill("manajer");
     await form.locator('input[name="password"]').fill("manager-pass-1");
@@ -229,7 +232,7 @@ test.describe("Hostinger mode (PHP API)", () => {
 
     await page.goto(BASE + "/#kos-role");
     const form = page.locator('form[data-login="admin"]');
-    if (await form.count()) { await form.locator('input[name="username"]').fill("ridhan"); await form.locator('input[name="password"]').fill("kos-portfolio-2026"); await form.locator('button[type="submit"]').click(); }
+    if (await form.count()) { await page.click('[data-role-card="admin"] .role-live summary'); await form.locator('input[name="username"]').fill("ridhan"); await form.locator('input[name="password"]').fill("kos-portfolio-2026"); await form.locator('button[type="submit"]').click(); }
     else await page.goto(BASE + "/#kos-app");
     await page.click('[data-kv="settings"]');
     await page.uncheck('form[data-form="general"] input[name="demo_enabled"]');
@@ -238,6 +241,8 @@ test.describe("Hostinger mode (PHP API)", () => {
     await v.goto(BASE + "/#kos-role");
     await v.reload();
     await expect(v.locator('[data-role-card="visitor"] .role-off')).toContainText("dinonaktifkan");
+    await expect(v.locator("#role-admin-demo, #role-mgmt-demo")).toHaveCount(0);           // every demo role is off
+    await expect(v.locator('[data-role-card="admin"] .role-live')).toHaveAttribute("open", ""); // live sign-in still there
     await v.goto(BASE + "/#kos-demo"); await v.reload();
     await expect(v.locator(".empty")).toContainText("Mode demo dinonaktifkan");
     await page.check('form[data-form="general"] input[name="demo_enabled"]');
