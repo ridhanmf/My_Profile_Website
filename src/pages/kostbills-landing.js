@@ -128,7 +128,7 @@ PAGES.kos = {
           <h1 class="kl-title"><span>${T.title[0]}</span> <span class="kl-hl">${T.title[1]}</span></h1>
           <p class="kl-lead">${T.lead}</p>
           <div class="kl-cta">
-            <a class="btn primary kl-btn-demo" href="#kos-demo" id="kl-demo">${T.ctaDemo} ${ICON.arrow}</a>
+            <a class="btn primary kl-btn-demo" href="#kos-role" id="kl-demo">${T.ctaDemo} ${ICON.arrow}</a>
             <button class="btn kl-btn-ghost" type="button" data-scroll="kl-features">${T.ctaFeatures}</button>
             <a class="btn kl-btn-wa" href="${esc(waHref(T.waIntro))}" target="_blank" rel="noopener">${WA_ICON} ${T.ctaWa}</a>
           </div>
@@ -201,7 +201,7 @@ PAGES.kos = {
     <section class="kl-end" style="--art:${esc(svgUrl(ART.kost()))}">
       <div class="wrap kl-end-in reveal">
         <h2>${T.endTitle}</h2><p>${T.endLead}</p>
-        <div class="kl-cta"><a class="btn primary kl-btn-demo" href="#kos-demo">${T.ctaDemo} ${ICON.arrow}</a>
+        <div class="kl-cta"><a class="btn primary kl-btn-demo" href="#kos-role">${T.ctaDemo} ${ICON.arrow}</a>
           <a class="btn kl-btn-wa" href="${esc(waHref(T.waIntro))}" target="_blank" rel="noopener">${WA_ICON} ${T.ctaWa} · ${waDisplay((adminData().profile || {}).whatsapp)}</a></div>
       </div>
     </section>`;

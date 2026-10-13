@@ -32,7 +32,7 @@ const KOS = (() => {
   const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d || 1); };
   const monthLabel = (m, short) => { const [y, mo] = m.split("-").map(Number); const n = monthNames()[mo - 1]; return short ? n.slice(0, 3) : `${n} ${y}`; };
   const addMonths = (m, k) => { const [y, mo] = m.split("-").map(Number); return ym(new Date(y, mo - 1 + k, 1)); };
-  const today = () => ymd(new Date());
+  const today = () => (MODE === "ops" && D && D.today ? D.today : ymd(new Date())); // ops: the server's date
   const daysUntil = (dateStr) => Math.round((parse(dateStr) - parse(today())) / 86400000);
   const dueFor = (m, day) => { const [y, mo] = m.split("-").map(Number); const last = new Date(y, mo, 0).getDate(); return `${m}-${pad(Math.min(day, last))}`; };
 
@@ -92,24 +92,43 @@ const KOS = (() => {
   }
 
   const KEY = "kos-demo-v3";
-  let D = null, IX = null;
+  /* MODE "demo": generated data kept in this browser only. MODE "ops": operational data loaded from the
+     server (kos.php) for Admin/Management; it is never written to localStorage and never mixed with the demo. */
+  let D = null, IX = null, MODE = "demo";
   function load() {
     const saved = store.get(KEY, null);
     D = saved && saved.v === 3 && saved.rooms && saved.rooms.length === 1000 ? saved : generate();
     D.rooms.forEach((r) => { if (!r.type) r.type = typeOf(r.floor, r.no); }); // demo data saved before room classes existed
+    MODE = "demo";
     reindex();
     return D;
   }
+  function setData(d) { D = d; MODE = "ops"; reindex(); return D; }
   function reindex() {
-    IX = { room: {}, tenant: {}, bill: {}, billsByRoom: {}, trxByBill: {} };
+    IX = { room: {}, tenant: {}, bill: {}, billsByRoom: {}, billsByTenant: {}, trxByBill: {} };
     D.rooms.forEach((r) => IX.room[r.id] = r);
     D.tenants.forEach((t) => IX.tenant[t.id] = t);
-    D.bills.forEach((b) => { IX.bill[b.id] = b; (IX.billsByRoom[b.roomId] = IX.billsByRoom[b.roomId] || []).push(b); });
+    D.bills.forEach((b) => { IX.bill[b.id] = b; (IX.billsByRoom[b.roomId] = IX.billsByRoom[b.roomId] || []).push(b); (IX.billsByTenant[b.tenantId] = IX.billsByTenant[b.tenantId] || []).push(b); });
     D.trx.forEach((t) => (IX.trxByBill[t.billId] = IX.trxByBill[t.billId] || []).push(t));
   }
+  /* Bills of the room's CURRENT tenant only: a new tenant never sees the previous tenant's bills or arrears. */
+  function currentBills(room) { return room && room.tenantId ? (IX.billsByTenant[room.tenantId] || []) : []; }
   let saveT;
-  function persist() { clearTimeout(saveT); saveT = setTimeout(() => { if (!store.set(KEY, D)) toast("This browser couldn't keep your demo changes."); }, 300); }
-  function reset() { store.del(KEY); D = generate(); reindex(); }
+  function persist() { if (MODE !== "demo") return; clearTimeout(saveT); saveT = setTimeout(() => { if (!store.set(KEY, D)) toast("This browser couldn't keep your demo changes."); }, 300); }
+  function reset() { store.del(KEY); D = generate(); MODE = "demo"; reindex(); }
+  /* Tenants a person registered by hand in this browser's demo (not part of the generated sample): the
+     generated list ends with 60 past tenants who have no deposit; anything after them was added with "check in". */
+  function userTenants(data) {
+    const list = (data && data.tenants) || [];
+    let last = -1; list.forEach((t, i) => { if (t.deposit === 0 && t.source !== "user") last = i; });
+    return list.filter((t, i) => t.source === "user" || i > last);
+  }
+  /* Rent label: one flat rate in the demo; the sale price per class (base + markup) for operational data. */
+  function priceLabel() {
+    if (MODE === "demo" || !D.types) return idr(RENT);
+    const v = [...new Set(D.types.map((t) => t.sale))].sort((a, b) => a - b);
+    return v.length === 1 ? idr(v[0]) : `${idr(v[0])}–${idr(v[v.length - 1])}`;
+  }
   const total = (b) => b.rent;
   const balance = (b) => Math.max(0, total(b) - b.paid);
   function status(b) {
@@ -134,17 +153,19 @@ const KOS = (() => {
   }
   function makeBill(room, m) {
     const ten = IX.tenant[room.tenantId]; if (!ten) return null;
-    const id = `INV-${m.replace("-", "").slice(2)}-${room.id.replace("-", "")}`;
-    if (IX.bill[id]) return null;
+    /* One bill per tenant per month, keyed by tenant (not just room), so a new tenant in the same room gets a fresh bill. */
+    if ((IX.billsByTenant[ten.id] || []).some((x) => x.month === m)) return null;
+    let id = `INV-${m.replace("-", "").slice(2)}-${room.id.replace("-", "")}`;
+    if (IX.bill[id]) id += "-" + ten.id;
     const b = { id, roomId: room.id, tenantId: ten.id, month: m, rent: room.rent || RENT, paid: 0, due: dueFor(m, ten.dueDay || 1), issued: today() < `${m}-01` ? `${m}-01` : today() };
-    D.bills.push(b); IX.bill[id] = b; (IX.billsByRoom[room.id] = IX.billsByRoom[room.id] || []).push(b);
+    D.bills.push(b); IX.bill[id] = b; (IX.billsByRoom[room.id] = IX.billsByRoom[room.id] || []).push(b); (IX.billsByTenant[ten.id] = IX.billsByTenant[ten.id] || []).push(b);
     return b;
   }
   function generateMonth(m) {
     let n = 0; D.rooms.forEach((r) => { if (r.status === "Occupied" && makeBill(r, m)) n++; }); persist(); return n;
   }
   function checkIn(room, info) {
-    const ten = { id: "T" + pad(D.tenants.length + 1, 4), name: info.name, phone: info.phone, job: info.job, roomId: room.id, checkIn: info.date, checkOut: null, deposit: RENT, dueDay: parse(info.date).getDate(), active: true };
+    const ten = { id: "T" + pad(D.tenants.length + 1, 4), name: info.name, phone: info.phone, job: info.job, roomId: room.id, checkIn: info.date, checkOut: null, deposit: RENT, dueDay: parse(info.date).getDate(), active: true, source: "user" };
     D.tenants.push(ten); IX.tenant[ten.id] = ten;
     room.status = "Occupied"; room.tenantId = ten.id; room.rent = RENT;
     const m = info.date.slice(0, 7); makeBill(room, m < ym(new Date()) ? ym(new Date()) : m);
@@ -164,11 +185,11 @@ const KOS = (() => {
   }
   function summary(m) { return { m, ...sumBills(D.bills.filter((b) => b.month === m)) }; }
   function collectedInYear(y) { return D.trx.filter((t) => t.date.slice(0, 4) === y).reduce((s, t) => s + t.amount, 0); }
-  return { statusLabel, roomLabel, methodLabel, included, TYPES, typeOf, get MONTHS() { return monthNames(); }, BLOCKS, RENT, METHODS, STATUSES, DUE_SOON_DAYS, load, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
+  return { statusLabel, roomLabel, methodLabel, included, TYPES, typeOf, get MONTHS() { return monthNames(); }, BLOCKS, RENT, METHODS, STATUSES, DUE_SOON_DAYS, load, setData, currentBills, userTenants, priceLabel, get MODE() { return MODE; }, KEY, reset, persist, total, balance, status, daysUntil, STATUS_PILL, ROOM_PILL, months, years, recordPayment, generateMonth, checkIn, checkOut, setRoomStatus, summary, sumBills, collectedInYear, monthLabel, addMonths, ym, today, get D() { return D; }, get IX() { return IX; } };
 })();
 
 function kosSummary() {
-  if (!KOS.D) KOS.load();
+  if (!KOS.D || KOS.MODE !== "demo") KOS.load(); // the landing page always describes the demo, never live data
   const occ = KOS.D.rooms.filter((r) => r.status === "Occupied").length;
   const y = KOS.today().slice(0, 4);
   return { occ: Math.round(occ / 10) + "%", collected: idrShort(KOS.collectedInYear(y)), overdue: KOS.D.bills.filter((b) => KOS.status(b) === "Overdue").length };

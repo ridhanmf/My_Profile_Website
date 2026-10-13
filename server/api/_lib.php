@@ -50,16 +50,31 @@ function kb_ensure_schema(): void
     $pdo = kb_db();
     if (kb_driver() === 'mysql') {
         $tail = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
-        $pdo->exec('CREATE TABLE IF NOT EXISTS kb_admins (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, username VARCHAR(64) NOT NULL UNIQUE, pass_hash VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)' . $tail);
+        $pdo->exec('CREATE TABLE IF NOT EXISTS kb_admins (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, username VARCHAR(64) NOT NULL UNIQUE, pass_hash VARCHAR(255) NOT NULL, role VARCHAR(16) NOT NULL DEFAULT \'admin\', created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)' . $tail);
         $pdo->exec('CREATE TABLE IF NOT EXISTS kb_site (id TINYINT UNSIGNED PRIMARY KEY, rev INT UNSIGNED NOT NULL, data LONGTEXT NOT NULL, updated_at DATETIME NOT NULL, updated_by VARCHAR(64) NULL)' . $tail);
         $pdo->exec('CREATE TABLE IF NOT EXISTS kb_login_attempts (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, ip VARCHAR(64) NOT NULL, at INT UNSIGNED NOT NULL, KEY ip_at (ip, at))' . $tail);
     } else {
-        $pdo->exec('CREATE TABLE IF NOT EXISTS kb_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, pass_hash TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS kb_admins (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, pass_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT \'admin\', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)');
         $pdo->exec('CREATE TABLE IF NOT EXISTS kb_site (id INTEGER PRIMARY KEY, rev INTEGER NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT NULL)');
         $pdo->exec('CREATE TABLE IF NOT EXISTS kb_login_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT NOT NULL, at INTEGER NOT NULL)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS ip_at ON kb_login_attempts (ip, at)');
     }
+    kb_ensure_roles();
 }
+
+/** Accounts made before roles existed are admins. Adds the role column once (older installs). */
+function kb_ensure_roles(): void
+{
+    static $done = false;
+    if ($done) return;
+    try { kb_db()->query('SELECT role FROM kb_admins LIMIT 1'); }
+    catch (PDOException $e) {
+        try { kb_db()->exec("ALTER TABLE kb_admins ADD COLUMN role VARCHAR(16) NOT NULL DEFAULT 'admin'"); } catch (PDOException $e2) { return; }
+    }
+    $done = true;
+}
+
+const KB_ROLES = ['admin', 'management'];
 
 function kb_now(): string { return gmdate('Y-m-d H:i:s'); }
 
@@ -135,26 +150,38 @@ function kb_logout(): void
     session_destroy();
 }
 
-/** The signed-in admin, or null. Touches the idle timer. */
-function kb_admin(): ?array
+/** The signed-in user (admin or management), or null. Touches the idle timer. */
+function kb_user(): ?array
 {
     kb_session();
     if (empty($_SESSION['admin_id'])) return null;
     if (time() - (int)($_SESSION['seen'] ?? 0) > KB_SESSION_IDLE) { kb_logout(); return null; }
     $_SESSION['seen'] = time();
-    return ['id' => (int)$_SESSION['admin_id'], 'username' => (string)$_SESSION['username'], 'csrf' => (string)$_SESSION['csrf']];
+    $role = (string)($_SESSION['role'] ?? 'admin');
+    return ['id' => (int)$_SESSION['admin_id'], 'username' => (string)$_SESSION['username'], 'role' => in_array($role, KB_ROLES, true) ? $role : 'management', 'csrf' => (string)$_SESSION['csrf']];
 }
 
-/** For changing requests: a signed-in admin plus the matching CSRF token header. */
-function kb_require_admin(): array
+/** The signed-in admin (role "admin" only), or null. */
+function kb_admin(): ?array
+{
+    $u = kb_user();
+    return $u && $u['role'] === 'admin' ? $u : null;
+}
+
+/** For changing requests: a signed-in user with one of $roles plus the matching CSRF token header.
+    The role is checked here on the server, so hiding a button in the page is never the only guard. */
+function kb_require_role(array $roles): array
 {
     kb_same_origin();
-    $a = kb_admin();
-    if (!$a) kb_fail(401, 'not_signed_in', 'Your admin session ended. Sign in again.');
+    $u = kb_user();
+    if (!$u) kb_fail(401, 'not_signed_in', 'Your session ended. Sign in again.');
     $sent = (string)($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
-    if ($sent === '' || !hash_equals($a['csrf'], $sent)) kb_fail(403, 'bad_csrf', 'The request could not be verified. Reload the page and sign in again.');
-    return $a;
+    if ($sent === '' || !hash_equals($u['csrf'], $sent)) kb_fail(403, 'bad_csrf', 'The request could not be verified. Reload the page and sign in again.');
+    if (!in_array($u['role'], $roles, true)) kb_fail(403, 'forbidden', 'Your role can view this data but cannot change it.');
+    return $u;
 }
+
+function kb_require_admin(): array { return kb_require_role(['admin']); }
 
 function kb_ip(): string { return substr((string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 0, 64); }
 
@@ -183,7 +210,8 @@ function kb_clear_fails(): void { kb_db()->prepare('DELETE FROM kb_login_attempt
 
 function kb_admin_count(): int
 {
-    try { return (int)kb_db()->query('SELECT COUNT(*) AS n FROM kb_admins')->fetch()['n']; }
+    kb_ensure_roles();
+    try { return (int)kb_db()->query("SELECT COUNT(*) AS n FROM kb_admins WHERE role = 'admin'")->fetch()['n']; }
     catch (PDOException $e) { return 0; } // tables not created yet
 }
 

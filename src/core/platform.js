@@ -12,13 +12,24 @@ const SERVER = STANDALONE && !!API_BASE;
 async function api(path, { method = "GET", json } = {}) {
   const headers = { Accept: "application/json" };
   if (json !== undefined) headers["Content-Type"] = "application/json";
-  if (method !== "GET" && ADMIN.csrf) headers["X-CSRF-Token"] = ADMIN.csrf;
+  const csrf = KSESS.csrf || ADMIN.csrf;
+  if (method !== "GET" && csrf) headers["X-CSRF-Token"] = csrf;
   let res;
   try { res = await fetch(API_BASE + path, { method, headers, body: json === undefined ? undefined : JSON.stringify(json), credentials: "same-origin", cache: "no-store" }); }
   catch (e) { return { ok: false, status: 0, error: "network" }; }
   let data = {};
   try { data = await res.json(); } catch (e) { data = { error: "bad_response" }; }
   return { ...data, status: res.status, ok: res.ok && data.ok !== false };
+}
+/* KostBills sign-in (Admin or Management) through the same PHP session as the site admin.
+   The role only changes what the page shows; the API checks the role again on every request. */
+const KSESS = { role: null, username: "", csrf: "" };
+const KOS_PUBLIC = { demo: null };
+async function kosPublic() {
+  if (!SERVER) { KOS_PUBLIC.demo = true; return KOS_PUBLIC; }
+  const r = await api("kos.php?action=public");
+  KOS_PUBLIC.demo = r.ok ? !!r.demo_enabled : true; // no server data yet: the demo stays available
+  return KOS_PUBLIC;
 }
 /* Swap the page's content for newer content (from the server) without reloading. */
 function replaceSite(data) {

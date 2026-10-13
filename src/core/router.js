@@ -6,8 +6,8 @@ const PROJECT_NAV = [
   ["smartpark", "SmartPark", ["Navigasi parkir mal · simulasi IoT", "Mall parking navigation · IoT simulation"], '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>'],
   ["kos", "KostBills", ["Manajemen tagihan kos 1.000 kamar", "Billing for a 1,000-room boarding house"], '<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6M8 11h.01M12 11h.01M16 11h.01"/>'],
 ];
-const ROUTE_TITLE = { home: "Home", collection: "MyCollection", smartpark: "SmartPark", kos: "KostBills", "kos-demo": "Demo KostBills" };
-const PROJECT_OF = { smartpark: "smartpark", kos: "kos", "kos-demo": "kos" };
+const ROUTE_TITLE = { home: "Home", collection: "MyCollection", smartpark: "SmartPark", kos: "KostBills", "kos-demo": "Demo KostBills", "kos-role": "Masuk KostBills", "kos-app": "Dasbor KostBills" };
+const PROJECT_OF = { smartpark: "smartpark", kos: "kos", "kos-demo": "kos", "kos-role": "kos", "kos-app": "kos" };
 let current = null;
 function routeName() {
   const h = (location.hash || "").replace(/^#/, "");

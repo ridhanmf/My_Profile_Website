@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin session.
- *   GET                       → { ok, configured, admin, username?, csrf? }
+ *   GET                       → { ok, configured, admin, role?, username?, csrf? }   (admin = role "admin")
  *   POST ?action=login        { username, password }            → { ok, username, csrf }
  *   POST ?action=logout       (X-CSRF-Token)                    → { ok }
  *   POST ?action=password     { current, username, password }   → { ok, username, csrf }
@@ -12,8 +12,9 @@ require __DIR__ . '/_lib.php';
 $action = (string)($_GET['action'] ?? '');
 
 if (kb_method() === 'GET') {
-    $a = kb_admin();
-    kb_json(200, ['ok' => true, 'configured' => kb_admin_count() > 0, 'admin' => (bool)$a] + ($a ? ['username' => $a['username'], 'csrf' => $a['csrf']] : []));
+    kb_ensure_roles();
+    $u = kb_user();
+    kb_json(200, ['ok' => true, 'configured' => kb_admin_count() > 0, 'admin' => $u !== null && $u['role'] === 'admin'] + ($u ? ['role' => $u['role'], 'username' => $u['username'], 'csrf' => $u['csrf']] : []));
 }
 if (kb_method() !== 'POST') kb_fail(405, 'method', 'Use GET or POST.');
 
@@ -23,10 +24,11 @@ if ($action === 'login') {
     $wait = kb_locked_for();
     if ($wait > 0) kb_fail(429, 'locked', 'Too many failed attempts. Try again in a few minutes.', ['retry_after' => $wait]);
 
+    kb_ensure_roles();
     $in = kb_body();
     $user = trim((string)($in['username'] ?? ''));
     $pass = (string)($in['password'] ?? '');
-    $st = kb_db()->prepare('SELECT id, username, pass_hash FROM kb_admins WHERE username = ?');
+    $st = kb_db()->prepare('SELECT id, username, pass_hash, role FROM kb_admins WHERE username = ?');
     $st->execute([$user]);
     $row = $st->fetch() ?: null;
     // Verify against a dummy hash when the user doesn't exist, so timing doesn't reveal usernames.
@@ -45,19 +47,20 @@ if ($action === 'login') {
     session_regenerate_id(true);
     $_SESSION['admin_id'] = (int)$row['id'];
     $_SESSION['username'] = $row['username'];
+    $_SESSION['role'] = in_array($row['role'], KB_ROLES, true) ? $row['role'] : 'management';
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
     $_SESSION['seen'] = time();
-    kb_json(200, ['ok' => true, 'username' => $row['username'], 'csrf' => $_SESSION['csrf']]);
+    kb_json(200, ['ok' => true, 'username' => $row['username'], 'role' => $_SESSION['role'], 'csrf' => $_SESSION['csrf']]);
 }
 
 if ($action === 'logout') {
-    kb_require_admin();
+    kb_require_role(KB_ROLES);
     kb_logout();
     kb_json(200, ['ok' => true]);
 }
 
 if ($action === 'password') {
-    $a = kb_require_admin();
+    $a = kb_require_role(KB_ROLES);
     $in = kb_body();
     $current = (string)($in['current'] ?? '');
     $user = trim((string)($in['username'] ?? ''));

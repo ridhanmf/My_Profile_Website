@@ -1,0 +1,42 @@
+/* ===== KostBills: role picker (#kos-role) and Admin / Management dashboard (#kos-app) ===== */
+.role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 28px; padding-bottom: 56px; align-items: start; }
+.role-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+.role-card h2 { font-family: var(--display); font-size: 30px; font-weight: 800; text-transform: uppercase; margin: 0; color: var(--ink); line-height: 1; }
+.role-card > p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+.role-ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.role-ic svg { width: 24px; height: 24px; }
+.role-card[data-role-card="management"] .role-ic { background: var(--ok-soft); color: var(--ok); }
+.role-card[data-role-card="visitor"] .role-ic { background: var(--amber-soft); color: var(--amber); }
+.role-rights { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.role-rights li.yes { color: var(--ink-2); }
+.role-rights li.no { color: var(--muted); }
+.role-form { display: grid; gap: 10px; }
+.role-msg { color: var(--bad); font-size: 13.5px; margin: 0; }
+.role-off { margin: 0; font-size: 13px; color: var(--muted); background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+@media (max-width: 900px) { .role-grid { grid-template-columns: 1fr; } }
+
+.ops-who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; color: #fff; }
+.ops-who .btn { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .3); }
+.kos-main .ops-note { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 28%, transparent); }
+.kos-main .ops-note b { color: var(--accent); }
+.ops-note span { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.demo-note .btn { margin-left: auto; }
+.kn-role { display: block; padding: 8px 12px; font-size: 13px; color: var(--muted); text-decoration: none; }
+.kn-role:hover { color: var(--accent); }
+.ops-empty { padding: 48px 16px; }
+.mine-panel { border-color: var(--amber); }
+.need-config { border-color: var(--warn); }
+.need-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-2); font-size: 14px; }
+.need-row:last-child { border-bottom: 0; }
+.radio-row { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.radio-row input { margin-top: 3px; flex-shrink: 0; }
+.wa-body { white-space: pre-wrap; font: 13.5px/1.5 system-ui, sans-serif; background: #e7fbe6; color: #10301a; border-radius: 10px; padding: 12px 14px; margin: 0; max-height: 50vh; overflow: auto; }
+.icon-btn.wa-send { color: var(--wa); }
+.pp-quote .kv { margin: 0; }
+.co-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
+.refund-policy { background: var(--amber-soft); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; }
+.refund-policy p { margin: 4px 0 0; }
+.audit-detail { font: 11.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); max-width: 420px; word-break: break-word; }
+.bad-t { color: var(--bad); }
+.sim-btns { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.kos-main form.panel { display: grid; gap: 12px; }

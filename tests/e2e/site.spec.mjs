@@ -31,7 +31,7 @@ const ARTIFACT_VISITOR = `window.claude = { use: async (n) => {
   return null; } };`;
 
 test.describe("routing and layout", () => {
-  for (const route of ["home", "collection", "smartpark", "kos", "kos-demo"]) {
+  for (const route of ["home", "collection", "smartpark", "kos", "kos-demo", "kos-role", "kos-app"]) {
     test(`#${route} renders without errors (desktop + mobile)`, async ({ page }) => {
       const errors = watchErrors(page);
       await page.goto(`/#${route}`);
@@ -338,20 +338,30 @@ test.describe("KostBills", () => {
     await page.locator("#klc-rate").fill("100");
     await expect(page.locator("#klc-month")).toHaveText("Rp 425 jt");
 
+    // "Coba Demo KostBills" opens the role picker first
     await page.click("#kl-demo");
+    await expect(page).toHaveURL(/#kos-role$/);
+    await expect(page.locator(".kos-hero h1")).toHaveText("Pilih peran");
+    await expect(page.locator(".role-card")).toHaveCount(3);
+    await expect(page.locator('[data-role-card="admin"] .role-off')).toContainText("memerlukan server"); // no PHP behind this static build
+    await expect(page.locator('[data-role-card="management"] .role-off')).toHaveCount(1);
+    await page.click("#role-visitor");
     await expect(page).toHaveURL(/#kos-demo$/);
     await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
+    await expect(page.locator(".demo-note")).toContainText("Pengunjung Demo · hanya lihat");
+    await page.goBack();
+    await expect(page).toHaveURL(/#kos-role$/);
     await page.goBack();
     await expect(page).toHaveURL(/#kos$/);
     await expect(page.locator(".kl-title")).toBeVisible();
     await page.goForward();
-    await expect(page.locator(".kos-hero h1")).toHaveText("Demo KostBills");
+    await expect(page.locator(".kos-hero h1")).toHaveText("Pilih peran");
     await page.click(".kos-back");
     await expect(page).toHaveURL(/#kos$/);
     expect(errors).toEqual([]);
   });
 
-  test("demo: filters, Due Soon, Rp850.000 payment, overpayment rejected, WhatsApp reminder, CSV export", async ({ page }) => {
+  test("demo visitor: read-only — filters, Due Soon, WhatsApp preview, CSV, but no way to change data", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/#kos-demo");
     await expect(page.locator(".kpi-row").first()).toContainText("Total Terkumpul Tahun Ini");
@@ -361,6 +371,8 @@ test.describe("KostBills", () => {
       overpaid: KOS.D.bills.filter((b) => b.paid > 850000).length,
     }));
     expect(stats).toEqual({ rooms: 1000, nonFlat: 0, overpaid: 0 });
+    await expect(page.locator('[data-act="reset-demo"]')).toHaveCount(0);
+    await expect(page.locator("#kos-nav .kn-role")).toHaveAttribute("href", "#kos-role");
 
     await page.click('[data-kv="bills"]');
     await expect(page.locator("#kb-mo")).toHaveCount(1);
@@ -370,15 +382,20 @@ test.describe("KostBills", () => {
     expect(pills.length).toBeGreaterThan(0);
     expect(new Set(pills)).toEqual(new Set(["Segera jatuh tempo"]));
     await expect(page.locator("table.t tbody .wa-ic").first()).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=Halo/);
+    await expect(page.locator("[data-pay]")).toHaveCount(0);
+    await expect(page.locator('[data-act^="gen:"]')).toHaveCount(0);
 
-    await page.locator("[data-pay]").first().click();
-    await expect(page.locator("#py-amt")).toHaveValue("850000");
-    await page.fill("#py-amt", "900000");
-    await page.click("#py-save");
-    await expect(page.locator("#py-err")).toContainText("Sisa tagihan");
-    await page.fill("#py-amt", "850000");
-    await page.click("#py-save");
-    await expect(page.locator(".toast")).toContainText("Rp 850.000");
+    // even a crafted call can't change the demo data in this role
+    const before = await page.evaluate(() => KOS.D.bills.length);
+    await page.evaluate(() => PAGES["kos-demo"].act("gen", KOS.addMonths(KOS.months()[0], 1)));
+    expect(await page.evaluate(() => KOS.D.bills.length)).toBe(before);
+
+    await page.click('[data-kv="rooms"]');
+    await page.locator(".room.occ").first().click();
+    await expect(page.locator(".modal")).toContainText("hanya bisa melihat");
+    await expect(page.locator('.modal [data-act^="checkout"], .modal #ci-form')).toHaveCount(0);
+    await page.click(".modal [data-close]");
+    await page.click('[data-kv="bills"]');
 
     await page.selectOption("#kb-status", "");
     const [download] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="csv-bills"]')]);
@@ -423,12 +440,8 @@ test.describe("KostBills", () => {
     await page.click('[data-kv="bills"]');
     await page.selectOption("#kb-status", "Due Soon");
     expect(new Set(await page.locator("table.t tbody .pill").allInnerTexts())).toEqual(new Set(["Due soon"]));
-    await page.locator("[data-pay]").first().click();
-    await expect(page.locator(".modal")).toContainText("Record payment");
-    await page.fill("#py-amt", "900000");
-    await page.click("#py-save");
-    await expect(page.locator("#py-err")).toContainText("The balance is");
-    await page.click(".modal [data-close]");
+    await expect(page.locator("[data-pay]")).toHaveCount(0);
+    await expect(page.locator(".demo-note")).toContainText("Demo visitor · view only");
     await page.click('[data-kv="overview"]');
     await expect(page.locator(".kpi-row").first()).toContainText("Total Collected This Year");
     await page.reload();
@@ -452,8 +465,24 @@ test.describe("KostBills", () => {
     await expect(page.locator(".tp-msg").first()).toContainText("jatuh tempo 7 hari lagi");
     await expect(page.locator(".tp-card")).toContainText(sevenDays.id);
     await expect(page.locator(".modal a.btn.wa")).toHaveAttribute("href", /^https:\/\/wa\.me\/6281224504181\?text=Halo/);
-    await page.click(".modal #tp-pay");
-    await expect(page.locator(".modal")).toContainText("Catat pembayaran");
+    await expect(page.locator(".modal #tp-pay")).toHaveCount(0); // visitors can't record payments
+    expect(errors).toEqual([]);
+  });
+
+  test("demo: a tenant the visitor registered earlier in this browser can be exported for the Admin", async ({ page }) => {
+    const errors = watchErrors(page);
+    await page.goto("/#kos-demo");
+    // Recreate what an earlier version of the demo allowed: a hand-made check-in kept in this browser.
+    await page.evaluate(() => { const r = KOS.D.rooms.find((x) => x.status === "Vacant"); KOS.checkIn(r, { name: "Penghuni Uji E2E", phone: "0812-0000-0099", job: "Tester", date: KOS.today() }); });
+    await page.waitForTimeout(500);
+    await page.reload();
+    await page.click('[data-kv="tenants"]');
+    await expect(page.locator(".mine-panel")).toContainText("Penghuni Uji E2E");
+    const [download] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="export-mine"]')]);
+    expect(download.suggestedFilename()).toBe("kostbills-penghuni-saya.json");
+    const data = JSON.parse(readFileSync(await download.path(), "utf8"));
+    expect(data.kind).toBe("kostbills-tenants");
+    expect(data.tenants.map((t) => [t.name, t.phone])).toEqual([["Penghuni Uji E2E", "0812-0000-0099"]]);
     expect(errors).toEqual([]);
   });
 });
